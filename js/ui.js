@@ -120,7 +120,7 @@ export function sizeBoard(board) {
   const raw = Math.floor((avail - (longest - 1) * gap - 2) / longest);
   const tile = Math.max(21, Math.min(46, raw));
   board.style.setProperty('--tile', tile + 'px');
-  board.style.setProperty('--tile-font', Math.max(24, Math.round(tile * 1.04)) + 'px');
+  board.style.setProperty('--tile-font', Math.max(26, Math.round(tile * 1.04)) + 'px');
   board.style.gap = `6px ${Math.max(6, gap * 2)}px`;
   for (const w of board.querySelectorAll('.word')) w.style.gap = gap + 'px';
 }
@@ -187,6 +187,9 @@ export function cancelPending() {
     try { p.cancel(); } catch { /* already gone */ }
   }
   pending.clear();
+  // Discipline interrupt is a live overlay, not a timer — clear it on every
+  // navigation so a mid-drill abandon cannot leave a red sheet on home.
+  hideInterrupt();
 }
 
 /** setTimeout that is cancelled automatically on navigation. */
@@ -333,6 +336,13 @@ export function attachCountdownAudio(timer, from = 3) {
 // Full-screen interrupt -- deliberately unmissable
 // ---------------------------------------------------------------------------
 
+export function hideInterrupt() {
+  const box = typeof document !== 'undefined' ? document.getElementById('interrupt') : null;
+  if (!box) return;
+  box.hidden = true;
+  box.replaceChildren();
+}
+
 export function showInterrupt({ kicker, title, body, button = 'I SEE IT', onClose }) {
   const box = $('#interrupt');
   box.replaceChildren(
@@ -341,7 +351,7 @@ export function showInterrupt({ kicker, title, body, button = 'I SEE IT', onClos
     ...[].concat(body).map((t) => h('p', {}, t)),
     btn(button, {
       onclick: () => {
-        box.hidden = true;
+        hideInterrupt();
         onClose?.();
       },
     })
@@ -356,15 +366,18 @@ export function showInterrupt({ kicker, title, body, button = 'I SEE IT', onClos
 
 export const card = (...kids) => h('div', { class: 'card' }, ...kids);
 
-export function verdictCard({ good, headline, lines = [], notes = [], tag = null }) {
+export function verdictCard({ good, headline, cue = null, why = null, lines = [], notes = [], tag = null }) {
+  const missCue = cue || tag?.cue || null;
+  const missWhy = why || tag?.why || null;
   return h('div', { class: `card ${good ? 'good' : 'bad'}` },
     h('div', { class: `verdict ${good ? 'good' : 'bad'}` }, headline),
+    !good && missCue ? h('p', { class: 'cue' }, missCue) : null,
+    !good && missWhy ? h('p', { class: 'why' }, missWhy) : null,
     ...notes.map((n) => h('p', { class: 'muted' }, n)),
-    lines.length ? mathBlock(lines) : null,
     tag ? h('div', { class: 'chip-row', style: { marginTop: '10px' } },
       h('span', { class: 'pill tag' }, `Mistake #${tag.id}`),
       h('span', { class: 'muted', style: { fontSize: '15px' } }, tag.name)) : null,
-    tag ? h('p', { style: { marginTop: '8px', fontStyle: 'italic' } }, tag.cue) : null
+    lines.length ? mathDisclosure(lines) : null
   );
 }
 
@@ -373,6 +386,14 @@ export function mathBlock(lines) {
     h('div', { class: `mathline${l.emphasis ? ' em' : ''}` },
       h('span', { class: 'l' }, l.label),
       h('span', { class: `v${l.emphasis ? (l.good ? ' good' : ' bad') : ''}` }, l.value))));
+}
+
+/** Math stays available; it is never the first thing she has to read. */
+export function mathDisclosure(lines, label = 'Show the math') {
+  if (!lines?.length) return null;
+  return h('details', { class: 'math-disclosure' },
+    h('summary', {}, label),
+    mathBlock(lines));
 }
 
 /** Honest-mode self scoring. The measured action already happened. */
@@ -385,13 +406,23 @@ export function selfScore(prompt, onPick) {
   ];
 }
 
-/** One rule, one sentence, one example. Swipe or tap to dismiss. */
-export function tipCard({ rule, example }, onDismiss) {
+/**
+ * Cue-first tip card.
+ * Accepts { cue, why, example, math } or legacy { rule, example }.
+ */
+export function tipCard({ cue, why, rule, example, math } = {}, onDismiss) {
+  const lead = cue || rule;
   const node = h('div', { class: 'card tip' },
-    h('h3', {}, 'Before you start'),
-    h('p', { style: { fontSize: '20px', fontWeight: '700' } }, rule),
+    h('h3', {}, 'Today\'s reflex'),
+    lead ? h('p', { class: 'cue' }, lead) : null,
+    why ? h('p', { class: 'why' }, why) : null,
     example ? h('p', { class: 'muted' }, example) : null,
-    h('p', { class: 'muted', style: { fontSize: '14px' } }, 'Swipe away or tap Got it.')
+    math ? (typeof math === 'string'
+      ? h('details', { class: 'math-disclosure' },
+          h('summary', {}, 'Show the math'),
+          h('p', { class: 'muted' }, math))
+      : mathDisclosure(math)) : null,
+    h('p', { class: 'muted tiny' }, 'Swipe away or tap Got it.')
   );
   let x0 = null;
   node.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
@@ -420,9 +451,23 @@ export const route = (pattern, handler) => routes.push({ parts: pattern.split('/
 export const go = (hash) => { window.location.hash = hash; };
 export const back = () => window.history.back();
 
+/** Highlight the bottom-nav item that owns the current screen. */
+function syncNav(raw) {
+  const section = (raw || 'home').split('/')[0] || 'home';
+  const active = ({
+    home: 'home', settings: 'home', days: 'home', day: 'home', method: 'home',
+    practice: 'practice', drill: 'practice',
+    cheat: 'cheat',
+  })[section] || 'home';
+  for (const b of document.querySelectorAll('.util[data-nav]')) {
+    b.classList.toggle('accent', b.dataset.nav === active);
+  }
+}
+
 export function startRouter(fallback = '#/home') {
   const resolve = () => {
     const raw = (window.location.hash || fallback).replace(/^#\/?/, '');
+    syncNav(raw);
     const parts = raw.split('/');
     for (const r of routes) {
       if (r.parts.length !== parts.length) continue;

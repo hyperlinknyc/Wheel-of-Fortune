@@ -11,6 +11,7 @@ import {
   scoreCategoryChoice, categoryTier, bestOf, letterSetFor, scoreLetterSet,
   boardCoverage, FREE_LETTERS, EXPECTED_BOARD_COVERAGE, COVERAGE_HEADLINE,
   RSTLNE_BONUS_COVERAGE, RSTLNE_MAIN_COVERAGE, MISTAKES, BONUS_RANKING,
+  tipFrom, REFLEXES, DEFAULT_LETTER_SET,
 } from '../strategy.js';
 import { measureSilence } from '../voice.js';
 
@@ -24,15 +25,14 @@ export const bonusCategory = {
   id: 'bonus-category',
   title: 'BONUS CATEGORY',
   minutes: 2,
-  tip: {
-    rule: 'If a proper-noun category is offered, you take something else. Every time.',
-    example: 'Two of three are names? Take the third instantly. You do not need to think about it.',
-  },
+  tip: tipFrom(REFLEXES.bonusAvoidName, {
+    example: 'Two of three are names? Take the third instantly. Do not rank the names.',
+  }),
   summaryLine: (rs) => {
     const breaks = rs.filter((r) => r.meta?.disciplineBreak).length;
     return breaks
-      ? `${breaks} discipline break${breaks > 1 ? 's' : ''}. Target is zero by Day 5.`
-      : 'Discipline held. That is what 100% looks like.';
+      ? `${breaks} name-grab${breaks > 1 ? 's' : ''}. Cue: name offered — take anything else.`
+      : 'Discipline held. Name offered → something else.';
   },
 
   round({ next }) {
@@ -104,10 +104,9 @@ export const bonusCategory = {
         verdictCard({
           good: false,
           headline: 'Out of time.',
-          notes: [
-            'Three seconds is what you actually get. Not choosing is a choice, and it is the wrong one.',
-            `The take here was ${r.best}.`,
-          ],
+          cue: REFLEXES.bonusAvoidName.cue,
+          why: 'Three seconds is what you get. Not choosing is the wrong choice.',
+          notes: [`The take here was ${r.best}.`],
         }),
         rankingCard(offered, r.best, null)
       );
@@ -119,9 +118,12 @@ export const bonusCategory = {
         verdictCard({
           good: r.correct,
           headline: r.correct ? 'Correct take.' : r.disciplineBreak ? 'Discipline break.' : `${r.best} was the better take.`,
-          notes: r.correct
-            ? [`${picked} is the highest-ranked category on offer.`]
-            : [`You took ${picked}. The take was ${r.best}.`],
+          cue: r.correct ? null : (r.disciplineBreak ? REFLEXES.bonusAvoidName.cue : null),
+          why: r.correct
+            ? `${picked} is the highest-ranked category on offer.`
+            : (r.disciplineBreak
+              ? REFLEXES.bonusAvoidName.why
+              : `You took ${picked}. The take was ${r.best}.`),
           tag: r.errorTag ? MISTAKES[r.errorTag] : null,
         }),
         rankingCard(offered, r.best, picked)
@@ -228,10 +230,10 @@ export const bonusLetters = {
   id: 'bonus-letters',
   title: 'BONUS LETTER SET',
   minutes: 3,
-  tip: {
-    rule: 'Y is a consonant. Picking Y does not use up your vowel.',
-    example: 'Living Thing: C, D, Y + A. FURRY, PUPPY, BUTTERFLY — Y is free money in that category.',
-  },
+  tip: tipFrom(REFLEXES.yConsonant, {
+    example: `Default set: ${DEFAULT_LETTER_SET.consonants.join(', ')} + ${DEFAULT_LETTER_SET.vowel}. Category can override.`,
+    math: REFLEXES.bonusLetters.why,
+  }),
   summaryLine: (rs) => {
     const avg = rs.reduce((s, r) => s + (r.meta?.score ?? 0), 0) / (rs.length || 1);
     return `Average set quality ${Math.round(avg * 100)}%.`;
@@ -296,10 +298,10 @@ export const bonusSim = {
   id: 'bonus-sim',
   title: 'BONUS ROUND',
   minutes: 4,
-  tip: {
-    rule: 'Expect about 45% of the board. A winnable bonus board is more than half blank.',
-    example: 'Unlimited guesses means talking always beats thinking. Silence is the only losing move.',
-  },
+  tip: tipFrom(REFLEXES.bonusTalk, {
+    example: 'Half blank is normal on purpose. Producers pick against RSTLNE.',
+    math: COVERAGE_HEADLINE,
+  }),
   summaryLine: (rs) => {
     const got = rs.filter((r) => r.correct).length;
     return `${got} of ${rs.length} solved inside ten seconds.`;

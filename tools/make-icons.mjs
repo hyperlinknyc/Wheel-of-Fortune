@@ -53,10 +53,10 @@ function png(width, height, rgb) {
 }
 
 const hex = (s) => [parseInt(s.slice(1, 3), 16), parseInt(s.slice(3, 5), 16), parseInt(s.slice(5, 7), 16)];
-const BG = hex('#12161F');
-const LIT = hex('#F4F7FB');
-const ACCENT = hex('#FFB020');
-const EDGE = hex('#2A3344');
+const BG = hex('#071530');
+const LIT = hex('#FFFFFF');
+const ACCENT = hex('#FFD100');
+const EDGE = hex('#3A5A8C');
 
 function draw(S) {
   const buf = Buffer.alloc(S * S * 3);

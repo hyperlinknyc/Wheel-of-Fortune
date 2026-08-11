@@ -7,6 +7,7 @@ import { logResult } from '../store.js';
 import {
   scoreSolveOrSpin, solveOrSpinMath, SPIN_DERIVATION, MISTAKES, money,
   scoreVowel, VOWEL_REASONS, vowelBreakEvenText, preferredVowel, copiesRequired,
+  tipFrom, REFLEXES,
 } from '../strategy.js';
 import { randomPot, midPuzzleState } from './common.js';
 
@@ -18,13 +19,13 @@ export const solveOrSpin = {
   id: 'solve-or-spin',
   title: 'SOLVE OR SPIN',
   minutes: 3,
-  tip: {
-    rule: 'Copies needed to justify another spin = pot ÷ 3000, rounded up.',
-    example: 'Holding $6,400? You need 3 certain copies of a big consonant. Over $9,000, you solve. Always.',
-  },
+  tip: tipFrom(REFLEXES.solveKnown, {
+    example: 'Mouth already has it? Hand does not reach the wheel. Over $9,000 is always solve.',
+    math: SPIN_DERIVATION,
+  }),
   summaryLine: (rs) => {
     const over = rs.filter((r) => r.meta?.verdict === 'over-spin').length;
-    return over ? `${over} over-spin${over > 1 ? 's' : ''}. That is the money leak.` : 'No over-spins. That is the whole game.';
+    return over ? `${over} over-spin${over > 1 ? 's' : ''}. Cue: if you know it — solve.` : 'No over-spins. The reflex held.';
   },
 
   round({ next }) {
@@ -40,7 +41,7 @@ export const solveOrSpin = {
         h('div', { class: 'card center' },
           h('h3', {}, "You're holding"),
           h('div', { class: 'big-num' }, money(pot)),
-          h('p', { style: { marginTop: '10px', fontWeight: '700' } }, 'You know the answer.')
+          h('p', { class: 'cue', style: { marginTop: '10px', fontSize: '20px' } }, 'You know the answer.')
         )
       );
       setActions(
@@ -60,8 +61,8 @@ export const solveOrSpin = {
         h('div', { class: 'cat' }, puzzle.category),
         renderBoard(puzzle.answer, revealed),
         h('div', { class: 'card center' },
-          h('h2', {}, 'How many copies of a big consonant are you certain of?'),
-          h('p', { class: 'muted' }, 'Certain. Not hopeful.')
+          h('p', { class: 'cue', style: { fontSize: '22px' } }, 'Certain copies on the board?'),
+          h('p', { class: 'why' }, 'Certain. Not hopeful.')
         )
       );
       setActions(
@@ -91,27 +92,34 @@ export const solveOrSpin = {
           : r.verdict === 'over-solve' ? 'Safe — but you left money there.'
             : 'Over-spin.';
 
-      const notes = [];
-      if (r.verdict === 'over-solve') {
-        notes.push(`At ${money(pot)} the bar is ${copiesRequired(pot)} copy. With even one certain big consonant, that spin was worth taking.`);
-      } else if (r.verdict === 'over-spin' && r.rule.nameForcesSolve && !r.rule.potForcesSolve) {
-        notes.push('Proper-name category. Solve on recognition, never milk. Knowing it is a name does not mean you know the letters.');
-      } else if (r.verdict === 'over-spin' && r.rule.potForcesSolve) {
-        notes.push('Over $9,000 there is no arithmetic left to do. You solve.');
+      let cue = null;
+      let why = null;
+      if (r.verdict === 'over-spin' && r.rule.potForcesSolve) {
+        cue = REFLEXES.potCap.cue;
+        why = REFLEXES.potCap.why;
+      } else if (r.verdict === 'over-spin' && r.rule.nameForcesSolve) {
+        cue = REFLEXES.nameSolve.cue;
+        why = REFLEXES.nameSolve.why;
+      } else if (r.verdict === 'over-spin') {
+        cue = REFLEXES.solveKnown.cue;
+        why = REFLEXES.solveKnown.why;
+      } else if (r.verdict === 'over-solve') {
+        cue = REFLEXES.certainCopies.cue;
+        why = `At ${money(pot)} you only needed ${copiesRequired(pot)} certain cop${copiesRequired(pot) === 1 ? 'y' : 'ies'}.`;
       }
 
       setScreen(
         verdictCard({
           good: r.correct,
           headline,
+          cue,
+          why,
           lines: solveOrSpinMath({ pot, copies, isProperName: puzzle.isProperName }),
-          notes,
           tag: r.errorTag ? MISTAKES[r.errorTag] : null,
         }),
         h('div', { class: 'card' },
           h('h3', {}, 'The answer was'),
-          renderBoard(puzzle.answer, 'ALL')),
-        !r.correct ? h('div', { class: 'card' }, h('h3', {}, 'Why the rule says that'), h('p', { class: 'muted' }, SPIN_DERIVATION)) : null
+          renderBoard(puzzle.answer, 'ALL'))
       );
       setActions(btn('NEXT', { variant: 'primary tall', onclick: () => next({ correct: r.correct, meta: { verdict: r.verdict } }) }));
     };
@@ -129,13 +137,16 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
     id: nameWeighted ? 'vowel-names' : 'vowel',
     title: 'VOWEL OR NO VOWEL',
     minutes: 3,
-    tip: {
-      rule: 'A vowel is $250 and never ends your turn. Buy one only when you can finish this sentence: this changes what I do next.',
-      example: 'On a name, buy before your second consonant. Order: A → O → E → I.',
-    },
+    tip: tipFrom(nameWeighted ? REFLEXES.nameVowel : REFLEXES.vowelReason, {
+      example: nameWeighted
+        ? 'Person / Place / Title: buy before the second consonant. Order A → O → E → I.'
+        : 'If you cannot finish “this changes what I do next,” keep the $250.',
+    }),
     summaryLine: (rs) => {
       const reflex = rs.filter((r) => r.meta?.errorTag === 3).length;
-      return reflex ? `${reflex} reflex ${reflex > 1 ? 'buys' : 'buy'}. Attach a reason or keep the $250.` : 'Every buy had a reason behind it.';
+      return reflex
+        ? `${reflex} reflex ${reflex > 1 ? 'buys' : 'buy'}. Cue: this changes what I do next — or don't buy.`
+        : 'Every buy had a next-action reason.';
     },
 
     round({ next }) {
@@ -151,7 +162,11 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
           h('div', { class: 'card center' },
             h('h3', {}, 'Pot'),
             h('div', { class: 'big-num' }, money(pot)),
-            h('p', { class: 'muted', style: { marginTop: '8px' } }, vowelBreakEvenText(pot)))
+            h('p', { class: 'cue', style: { marginTop: '10px', fontSize: '20px' } },
+              nameWeighted ? REFLEXES.nameVowel.cue : REFLEXES.vowelReason.cue),
+            h('details', { class: 'math-disclosure' },
+              h('summary', {}, 'Show the math'),
+              h('p', { class: 'muted' }, vowelBreakEvenText(pot))))
         );
         // Two rows, not five across: five buttons on a 320px iPhone SE would be
         // 50px wide, under the 60px floor for fast one-handed tapping.
@@ -169,8 +184,8 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
         setScreen(
           h('div', { class: 'cat' }, puzzle.category),
           h('div', { class: 'card center' },
-            h('h2', {}, `You bought ${vowel}. Why?`),
-            h('p', { class: 'muted' }, 'Pick the reason that was actually in your head.')),
+            h('p', { class: 'cue', style: { fontSize: '22px' } }, `You bought ${vowel}. Why?`),
+            h('p', { class: 'why' }, 'Pick the reason that was actually in your head.')),
           ...reasons.map((r) =>
             btn(r.text, {
               variant: 'small',
@@ -199,19 +214,19 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
         });
 
         const best = preferredVowel([...revealed]);
+        const reflex = puzzle.isProperName ? REFLEXES.nameVowel : REFLEXES.vowelReason;
         setScreen(
           verdictCard({
             good: r.correct,
             headline: r.headline,
-            notes: [r.detail, vowelBreakEvenText(pot)],
+            cue: r.correct ? null : (r.errorTag ? MISTAKES[r.errorTag].cue : reflex.cue),
+            why: r.correct ? r.detail : (r.errorTag ? MISTAKES[r.errorTag].why : reflex.why),
+            lines: [
+              { label: 'Break-even', value: vowelBreakEvenText(pot) },
+              ...(puzzle.isProperName ? [{ label: 'Name vowel here', value: best, emphasis: true }] : []),
+            ],
             tag: r.errorTag ? MISTAKES[r.errorTag] : null,
           }),
-          puzzle.isProperName
-            ? h('div', { class: 'card' },
-              h('h3', {}, 'Name rule'),
-              h('p', {}, `Buy the vowel before your second consonant. Here that is ${best}.`),
-              h('p', { class: 'muted' }, 'Order: A → O → E → I.'))
-            : null,
           h('div', { class: 'card' }, h('h3', {}, 'The answer was'), renderBoard(puzzle.answer, 'ALL'))
         );
         setActions(btn('NEXT', { variant: 'primary tall', onclick: () => next({ correct: r.correct, meta: { errorTag: r.errorTag } }) }));

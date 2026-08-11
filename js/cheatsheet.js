@@ -1,16 +1,19 @@
-// The green-room screen. One tap from anywhere, readable at arm's length.
-// Everything here is generated from strategy.js so it cannot drift from the
-// rules the drills score against.
+// The green-room cue card. One tap from anywhere, readable at arm's length.
+// Face = IF → DO + one-line why. Math is collapsed. Generated from strategy.js.
 
-import { h, setScreen, setActions, setTop, btn, go } from './ui.js';
+import { h, setScreen, setActions, setTop, btn, go, mathDisclosure } from './ui.js';
 import {
   BONUS_RANKING, BONUS_LETTER_SETS, MISTAKES, COPIES_DIVISOR, VOWEL_COST,
   EXPECTED_BOARD_COVERAGE, RSTLNE_BONUS_COVERAGE, RSTLNE_MAIN_COVERAGE,
-  DEFAULT_LETTER_SET, money, CONVERSION_CEILING,
+  DEFAULT_LETTER_SET, money, CONVERSION_CEILING, REFLEXES, SPIN_DERIVATION,
 } from './strategy.js';
 
-const ifThen = (cond, then) =>
-  h('div', { class: 'ifthen' }, h('b', {}, cond), h('span', { class: 'then' }, then));
+const cueRow = (reflex, { if: ifText = null } = {}) =>
+  h('div', { class: 'ifthen' },
+    ifText ? h('b', {}, ifText) : h('b', {}, 'Cue'),
+    h('span', { class: 'then' },
+      h('span', { class: 'cue', style: { display: 'block', fontSize: '20px', margin: '4px 0' } }, reflex.cue),
+      h('span', { class: 'why', style: { display: 'block', margin: 0 } }, reflex.why)));
 
 const section = (title, open, ...body) =>
   h('details', { class: 'acc', ...(open ? { open: true } : {}) },
@@ -18,42 +21,41 @@ const section = (title, open, ...body) =>
     h('div', { class: 'body' }, ...body));
 
 export function cheatSheetScreen() {
-  setTop({ title: 'CHEAT SHEET', back: () => history.back() });
+  setTop({ title: 'CUE CARD', back: () => history.back() });
 
   setScreen(
     h('p', { class: 'muted', style: { marginBottom: '14px' } },
-      'Tap a heading to open it. This screen works with no signal.'),
+      'Green-room card. Cues on the face. Math only if you want it.'),
 
     section('Solve or spin', true,
-      ifThen('Pot over $9,000', 'Solve. No exceptions. There is no arithmetic left.'),
-      ifThen('Proper-name category', 'Solve on recognition. Never milk a name.'),
-      ifThen('Otherwise', `Copies needed = pot ÷ ${COPIES_DIVISOR}, rounded up.`),
-      h('div', { class: 'hr' }),
-      ...[[2500, 1], [4500, 2], [7000, 3]].map(([pot, n]) =>
-        h('div', { class: 'mathline' },
-          h('span', { class: 'l' }, `Holding ${money(pot)}`),
-          h('span', { class: 'v' }, `${n} certain cop${n === 1 ? 'y' : 'ies'}`))),
-      h('div', { class: 'mathline' },
-        h('span', { class: 'l' }, 'Holding over $9,000'),
-        h('span', { class: 'v' }, 'SOLVE')),
-      h('p', { class: 'muted', style: { marginTop: '10px' } },
-        'Certain means you can see where they go. Not hopeful.')),
+      cueRow(REFLEXES.potCap, { if: 'Pot over $9,000' }),
+      cueRow(REFLEXES.nameSolve, { if: 'Proper-name category' }),
+      cueRow(REFLEXES.solveKnown, { if: 'You know the answer' }),
+      cueRow(REFLEXES.certainCopies, { if: 'You do not know it yet' }),
+      mathDisclosure([
+        { label: `Holding ${money(2500)}`, value: '1 certain copy' },
+        { label: `Holding ${money(4500)}`, value: '2 certain copies' },
+        { label: `Holding ${money(7000)}`, value: '3 certain copies' },
+        { label: `Holding over ${money(9000)}`, value: 'SOLVE', emphasis: true },
+        { label: 'Rule', value: `ceil(pot ÷ ${COPIES_DIVISOR})` },
+      ], 'Show the copy table'),
+      h('details', { class: 'math-disclosure' },
+        h('summary', {}, 'Show the derivation'),
+        h('p', { class: 'muted' }, SPIN_DERIVATION))),
 
     section('Vowels', false,
-      ifThen(`A vowel costs ${money(VOWEL_COST)}`, 'A correct vowel does not end your turn.'),
-      ifThen('Before you buy', 'Finish this sentence: this changes what I do next.'),
-      ifThen('On a name', 'Buy before your second consonant. Order: A → O → E → I.'),
-      ifThen('Never buy', 'A vowel you could read off the word shape, or any vowel after you already know the answer.'),
-      h('div', { class: 'hr' }),
-      h('div', { class: 'mathline' },
-        h('span', { class: 'l' }, 'At a $2,500 pot'),
-        h('span', { class: 'v' }, 'needs 10% better odds')),
-      h('div', { class: 'mathline' },
-        h('span', { class: 'l' }, 'At a $5,000 pot'),
-        h('span', { class: 'v' }, 'needs 5% better odds'))),
+      cueRow(REFLEXES.vowelReason, { if: 'Before you buy' }),
+      cueRow(REFLEXES.nameVowel, { if: 'On a name' }),
+      h('div', { class: 'ifthen' },
+        h('b', {}, `A vowel costs ${money(VOWEL_COST)}`),
+        h('span', { class: 'then' }, 'A correct vowel does not end your turn.')),
+      mathDisclosure([
+        { label: 'At a $2,500 pot', value: 'needs 10% better odds' },
+        { label: 'At a $5,000 pot', value: 'needs 5% better odds' },
+      ])),
 
     section('Bonus: which category', false,
-      h('p', { style: { fontWeight: '800' } }, 'If a proper-noun category is offered, take something else.'),
+      cueRow(REFLEXES.bonusAvoidName),
       h('p', { class: 'muted' }, 'Two of three are names? Take the third instantly.'),
       h('div', { class: 'hr' }),
       h('h3', {}, 'Take, in order'),
@@ -64,9 +66,8 @@ export function cheatSheetScreen() {
       h('p', { style: { color: 'var(--bad)' } }, BONUS_RANKING.AVOID.join(' · '))),
 
     section('Bonus: which letters', false,
-      h('p', { style: { fontWeight: '800' } },
-        `Default: ${DEFAULT_LETTER_SET.consonants.join(', ')} + ${DEFAULT_LETTER_SET.vowel}`),
-      h('p', { class: 'muted' }, 'Y is a consonant. Picking Y does not use up your vowel.'),
+      cueRow(REFLEXES.bonusLetters),
+      cueRow(REFLEXES.yConsonant),
       h('div', { class: 'hr' }),
       ...Object.entries(BONUS_LETTER_SETS)
         .filter(([c]) => BONUS_RANKING.TAKE.includes(c) || BONUS_RANKING.TOLERATE.includes(c))
@@ -86,42 +87,47 @@ export function cheatSheetScreen() {
             h('span', { class: 'l' }, c),
             h('span', { class: 'v' }, `${s.consonants.join(' ')} + ${s.vowel}`)))),
 
-    section('Bonus: the board', false,
-      h('div', { class: 'center' },
-        h('div', { class: 'big-num' }, Math.round(EXPECTED_BOARD_COVERAGE * 100) + '%'),
-        h('p', { style: { fontWeight: '700' } }, 'A winnable bonus board is more than half blank.')),
-      h('div', { class: 'hr' }),
-      h('div', { class: 'mathline' },
-        h('span', { class: 'l' }, 'RSTLNE on a bonus board'),
-        h('span', { class: 'v' }, Math.round(RSTLNE_BONUS_COVERAGE * 100) + '%')),
-      h('div', { class: 'mathline' },
-        h('span', { class: 'l' }, 'RSTLNE in the main game'),
-        h('span', { class: 'v' }, Math.round(RSTLNE_MAIN_COVERAGE * 100) + '%')),
-      h('p', { class: 'muted', style: { marginTop: '10px' } },
-        'Producers pick against RSTLNE on purpose. Half a board is normal, not a disaster.'),
-      h('p', { style: { fontWeight: '800', marginTop: '10px' } },
-        'Unlimited guesses. Talking beats thinking. Silence is the only losing move.')),
+    section('Bonus: the ten seconds', false,
+      cueRow(REFLEXES.bonusTalk),
+      mathDisclosure([
+        { label: 'Expect about', value: Math.round(EXPECTED_BOARD_COVERAGE * 100) + '% lit' },
+        { label: 'RSTLNE on a bonus board', value: Math.round(RSTLNE_BONUS_COVERAGE * 100) + '%' },
+        { label: 'RSTLNE in the main game', value: Math.round(RSTLNE_MAIN_COVERAGE * 100) + '%' },
+        { label: 'Default set', value: `${DEFAULT_LETTER_SET.consonants.join(' ')} + ${DEFAULT_LETTER_SET.vowel}` },
+      ])),
 
     section('Toss-ups', false,
-      ifThen('Buzz early', 'You get the whole board and the money.'),
-      ifThen(`If your conversion is above ${Math.round(CONVERSION_CEILING * 100)}%`,
-        'You are buzzing too late and leaving toss-ups on the table.'),
-      ifThen('Wrong buzz costs nothing', 'You lose that toss-up. That is all.')),
+      cueRow(REFLEXES.tossBuzz),
+      h('div', { class: 'ifthen' },
+        h('b', {}, `Conversion above ${Math.round(CONVERSION_CEILING * 100)}%`),
+        h('span', { class: 'then' }, 'You are buzzing too late.')),
+      h('div', { class: 'ifthen' },
+        h('b', {}, 'Wrong buzz'),
+        h('span', { class: 'then' }, 'Costs only that toss-up. That is all.'))),
+
+    section('Attention', false,
+      cueRow(REFLEXES.attentionLoop),
+      h('div', { class: 'ifthen' },
+        h('b', {}, 'Physical anchor'),
+        h('span', { class: 'then' }, 'Thumb→index longest word · middle best guess · ring first action.'))),
+
+    section('Say it / names', false,
+      cueRow(REFLEXES.sayExactly),
+      cueRow(REFLEXES.soundNames)),
 
     section('The five mistakes', false,
       ...Object.values(MISTAKES).map((m) =>
         h('div', { class: 'ifthen' },
           h('b', {}, `${m.id}. ${m.name}`),
-          h('span', { class: 'then', style: { fontStyle: 'italic' } }, m.cue)))),
-
-    section('On stage', false,
-      ifThen('When you get control', 'You already know your first action. You decided during their turn.'),
-      ifThen('Three-finger anchor', 'Thumb to index: longest word. Middle: best guess. Ring: first action.'),
-      ifThen('Saying the answer', 'Full articulation, 80% speed. Every word, in order, no extras, clear ending.'),
-      ifThen('Proper names', 'Read it aloud as sounds, not letters. Recognition of names is auditory.')),
+          h('span', { class: 'then' },
+            h('span', { class: 'cue', style: { display: 'block', fontSize: '18px', margin: '4px 0' } }, m.cue),
+            h('span', { class: 'why', style: { display: 'block', margin: 0 } }, m.why))))),
 
     h('div', { class: 'spacer' })
   );
 
-  setActions(btn('BACK TO PRACTICE', { variant: 'primary tall', onclick: () => go('#/practice') }));
+  setActions(
+    btn('BACK TO PRACTICE', { variant: 'primary tall', onclick: () => go('#/practice') }),
+    btn('THE METHOD', { variant: 'ghost', onclick: () => go('#/method') })
+  );
 }
