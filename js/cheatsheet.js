@@ -126,5 +126,8 @@ export function cheatSheetScreen() {
     h('div', { class: 'spacer' })
   );
 
-  setActions(btn('BACK TO PRACTICE', { variant: 'primary tall', onclick: () => go('#/practice') }));
+  setActions(
+    btn('BACK TO PRACTICE', { variant: 'primary tall', onclick: () => go('#/practice') }),
+    btn('THE METHOD', { variant: 'ghost', onclick: () => go('#/method') })
+  );
 }

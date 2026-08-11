@@ -6,6 +6,7 @@ import {
 import { loadBank } from './data.js';
 import * as store from './store.js';
 import { cheatSheetScreen } from './cheatsheet.js';
+import { methodScreen } from './method.js';
 import { runBlock } from './drills/common.js';
 import { solveOrSpin, vowelDrill, vowelNameDrill } from './drills/decision.js';
 import { bonusCategory, bonusLetters, bonusSim } from './drills/bonus.js';
@@ -84,7 +85,17 @@ function homeScreen() {
 
     card(
       h('h3', {}, `Day ${dayNumber} · ${day.theme}`),
-      h('p', { class: 'muted' }, day.blurb))
+      h('p', { class: 'muted' }, day.blurb)),
+
+    h('button', {
+      class: 'day', type: 'button',
+      onclick: () => go('#/method'),
+      style: { borderColor: 'var(--line)' },
+    },
+      h('div', { class: 'n' }, '?'),
+      h('div', { class: 't' },
+        h('b', {}, 'The method'),
+        h('span', {}, 'Ethos, and why each day exists')))
   );
 
   setActions(
@@ -172,7 +183,10 @@ function settingsScreen() {
         },
       }))
   );
-  setActions(btn('DONE', { variant: 'primary tall', onclick: () => go('#/home') }));
+  setActions(
+    btn('DONE', { variant: 'primary tall', onclick: () => go('#/home') }),
+    btn('THE METHOD', { variant: 'ghost', onclick: () => go('#/method') })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -198,6 +212,7 @@ async function boot() {
   route('home', homeScreen);
   route('practice', practiceScreen);
   route('cheat', cheatSheetScreen);
+  route('method', methodScreen);
   route('settings', settingsScreen);
   route('days', () => import('./lessons.js').then((m) => m.lessonTreeScreen()));
   route('day/:n', ({ n }) => runDay(Number(n)));

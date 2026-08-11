@@ -344,6 +344,11 @@ p  { margin: 0 0 10px; }
 .math-disclosure > summary::-webkit-details-marker { display: none; }
 .math-disclosure > summary::after { content: '+'; margin-left: auto; font-size: 22px; color: var(--muted); }
 .math-disclosure[open] > summary::after { content: '−'; }
+.method-day {
+  border-top: 1px solid var(--line);
+  padding: 14px 0 6px;
+}
+.method-day:first-of-type { border-top: 0; padding-top: 4px; }
 .list { margin: 0; padding-left: 20px; }
 .list li { margin-bottom: 6px; }
 .spacer { height: 12px; }

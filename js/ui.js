@@ -455,7 +455,7 @@ export const back = () => window.history.back();
 function syncNav(raw) {
   const section = (raw || 'home').split('/')[0] || 'home';
   const active = ({
-    home: 'home', settings: 'home', days: 'home', day: 'home',
+    home: 'home', settings: 'home', days: 'home', day: 'home', method: 'home',
     practice: 'practice', drill: 'practice',
     cheat: 'cheat',
   })[section] || 'home';

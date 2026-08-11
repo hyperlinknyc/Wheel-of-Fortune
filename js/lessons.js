@@ -195,10 +195,13 @@ export function lessonTreeScreen() {
       'Practice Anything is in the bar at the bottom. Not locked.')
   );
 
-  setActions(btn(store.isDayComplete(unlocked) ? 'REVIEW' : `START DAY ${unlocked}`, {
-    variant: 'primary tall',
-    onclick: () => { primeAudio(); go('#/day/' + unlocked); },
-  }));
+  setActions(
+    btn(store.isDayComplete(unlocked) ? 'REVIEW' : `START DAY ${unlocked}`, {
+      variant: 'primary tall',
+      onclick: () => { primeAudio(); go('#/day/' + unlocked); },
+    }),
+    btn('WHY THIS PLAN', { variant: 'ghost', onclick: () => go('#/method') })
+  );
 }
 
 export function runDay(n) {
