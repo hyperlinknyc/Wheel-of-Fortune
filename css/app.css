@@ -60,7 +60,7 @@ body { overflow: hidden; }
 #topRight { min-width: 60px; text-align: right; padding-right: 8px;
   font-size: 15px; font-weight: 700; color: var(--muted); }
 .icon-btn {
-  min-width: 60px; min-height: 44px; border: 0; background: transparent;
+  min-width: 60px; min-height: 60px; border: 0; background: transparent;
   color: var(--text); font-size: 34px; line-height: 1; padding: 0 8px;
   touch-action: manipulation;
 }
@@ -72,6 +72,7 @@ body { overflow: hidden; }
   padding: var(--pad) var(--pad) 8px;
   outline: none;
 }
+#screen.dense { padding-top: 8px; }
 
 /* ---------- bottom action zone: everything primary lives here ---------- */
 #actions {
@@ -147,6 +148,7 @@ body { overflow: hidden; }
   text-align: center; font-size: 15px; font-weight: 800; letter-spacing: .18em;
   color: var(--accent); text-transform: uppercase; margin: 0 0 12px;
 }
+.cat.tight { margin-bottom: 6px; }
 
 /* ---------- cards / typography ---------- */
 .card {
@@ -209,7 +211,8 @@ p  { margin: 0 0 10px; }
 .ring { flex: 1; text-align: center; }
 .ring svg { width: 100%; max-width: 104px; height: auto; }
 .ring .rlabel { font-size: 12px; font-weight: 800; letter-spacing: .07em;
-  color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+  color: var(--muted); text-transform: uppercase; margin-top: 2px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .ring .rval { font-family: var(--mono); font-size: 20px; font-weight: 800; }
 
 /* ---------- lesson tree ---------- */
@@ -235,12 +238,13 @@ p  { margin: 0 0 10px; }
 .day.locked { opacity: .5; }
 
 /* ---------- keyboard grid (bonus letter picker) ---------- */
-.kb { display: flex; flex-direction: column; gap: 6px; }
-.kbrow { display: flex; gap: 6px; justify-content: center; }
+.kb { display: flex; flex-direction: column; gap: 4px; }
+.kbrow { display: flex; gap: 5px; justify-content: center; }
 .kbrow .lbl { flex: 0 0 100%; font-size: 12px; font-weight: 800; letter-spacing: .1em;
-  color: var(--muted); text-transform: uppercase; margin-top: 4px; }
+  color: var(--muted); text-transform: uppercase; margin-top: 2px; line-height: 1.2;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .key {
-  flex: 1 1 0; min-width: 0; min-height: 62px;
+  flex: 1 1 0; min-width: 0; min-height: 60px;
   border: 2px solid var(--line); border-radius: 10px;
   background: var(--surface-2); color: var(--text);
   font-family: var(--mono); font-size: 23px; font-weight: 800;
@@ -248,8 +252,19 @@ p  { margin: 0 0 10px; }
 }
 .key:active { transform: scale(.94); }
 .key.on { background: var(--accent); color: #17110A; border-color: var(--accent); }
-.key.free { opacity: .28; }
 .key.y { border-color: var(--accent); }
+
+/* RSTLNE lives outside the grid: it is information, not a choice, and keeping
+   it out lets every pickable key stay a full-size target. */
+.freebar {
+  display: flex; align-items: center; gap: 10px;
+  padding: 4px 10px; margin-bottom: 4px;
+  border: 1px dashed var(--line); border-radius: 8px; background: var(--surface);
+}
+.freebar .lbl2 { font-size: 12px; font-weight: 800; letter-spacing: .08em;
+  color: var(--muted); text-transform: uppercase; }
+.freebar .letters { margin-left: auto; font-family: var(--mono); font-size: 18px;
+  font-weight: 800; letter-spacing: .18em; color: var(--muted); white-space: nowrap; }
 
 /* ---------- category strips (drill 3) ---------- */
 .strip {

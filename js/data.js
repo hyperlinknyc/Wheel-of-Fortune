@@ -55,7 +55,10 @@ function matches(p, f) {
 export function pick(filter = {}) {
   const recent = recentPuzzleIds();
   let pool = BANK.filter((p) => matches(p, filter));
-  if (!pool.length) return null;
+  // A filter that matches nothing must still hand back a board. An empty
+  // screen mid-drill is worse than a slightly off-spec puzzle.
+  if (!pool.length) pool = BANK.filter((p) => matches(p, { isProperName: filter.isProperName }));
+  if (!pool.length) pool = BANK;
 
   const fresh = pool.filter((p) => !recent.has(p.id));
   if (fresh.length >= 4) pool = fresh;

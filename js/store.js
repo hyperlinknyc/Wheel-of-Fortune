@@ -59,7 +59,11 @@ function blank() {
 let state = blank();
 let saveTimer = null;
 
-export function load() {
+let loaded = false;
+
+export function load({ force = false } = {}) {
+  if (loaded && !force) return state;
+  loaded = true;
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) {
@@ -145,13 +149,13 @@ export function markBlockComplete(dayNumber, blockId, elapsedMs = 0) {
   day.ms += elapsedMs;
   if (!day.blocks.includes(`${dayNumber}:${blockId}`)) day.blocks.push(`${dayNumber}:${blockId}`);
   touchStreak();
-  save();
+  flush(); // milestone: write it now, not on a 250ms debounce
 }
 
 export function markDayComplete(dayNumber) {
   const l = (state.lessons[dayNumber] ??= { blocks: {}, done: false });
   l.done = true;
-  save();
+  flush(); // milestone: unlocking the next day must survive a hard close
 }
 
 export const isDayComplete = (n) => !!state.lessons[n]?.done;
@@ -343,5 +347,6 @@ export const recentPuzzleIds = () => new Set(state.recent);
 
 export function resetAll() {
   state = blank();
+  loaded = true;
   flush();
 }

@@ -153,10 +153,13 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
             h('div', { class: 'big-num' }, money(pot)),
             h('p', { class: 'muted', style: { marginTop: '8px' } }, vowelBreakEvenText(pot)))
         );
+        // Two rows, not five across: five buttons on a 320px iPhone SE would be
+        // 50px wide, under the 60px floor for fast one-handed tapping.
+        const vowelBtn = (v) =>
+          btn(v, { variant: 'tall', onclick: () => askReason(v, performance.now() - t0) });
         setActions(
-          h('div', { class: 'row' },
-            ...['A', 'E', 'I', 'O', 'U'].map((v) =>
-              btn(v, { variant: 'tall', onclick: () => askReason(v, performance.now() - t0) }))),
+          h('div', { class: 'row' }, ...['A', 'E', 'I'].map(vowelBtn)),
+          h('div', { class: 'row' }, ...['O', 'U'].map(vowelBtn)),
           btn('NO VOWEL', { variant: 'ghost', onclick: () => score({ choice: 'NONE', latencyMs: performance.now() - t0 }) })
         );
       };

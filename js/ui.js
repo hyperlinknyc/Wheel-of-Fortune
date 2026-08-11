@@ -2,6 +2,9 @@
 
 export const $ = (sel, root = document) => root.querySelector(sel);
 
+/** Marker object understood by setScreen. */
+export const screenOpts = (o) => ({ ...o, __screenOpts: true });
+
 /** Minimal hyperscript. h('div', {class:'x'}, 'text', child) */
 export function h(tag, props = {}, ...kids) {
   const el = document.createElement(tag);
@@ -36,8 +39,11 @@ export const btn = (label, props = {}) => {
 const screenEl = () => $('#screen');
 const actionsEl = () => $('#actions');
 
+/** Pass { dense: true } to reclaim top padding on tall, grid-heavy screens. */
 export function setScreen(...nodes) {
   const s = screenEl();
+  const opts = (nodes.length && nodes[nodes.length - 1]?.__screenOpts) ? nodes.pop() : null;
+  s.classList.toggle('dense', !!opts?.dense);
   s.replaceChildren(...nodes.flat(9).filter(Boolean));
   s.scrollTop = 0;
   s.classList.remove('fade');
@@ -122,8 +128,11 @@ export function sizeBoard(board) {
 export function sizeAllBoards() {
   for (const b of document.querySelectorAll('.board')) sizeBoard(b);
 }
-window.addEventListener('resize', sizeAllBoards);
-window.addEventListener('orientationchange', () => setTimeout(sizeAllBoards, 120));
+// Guarded so the module can be imported by the build tools under Node.
+if (typeof window !== 'undefined') {
+  window.addEventListener('resize', sizeAllBoards);
+  window.addEventListener('orientationchange', () => setTimeout(sizeAllBoards, 120));
+}
 
 /** Light up one letter across a board, with a short pop. */
 export function revealLetter(boardWrap, letter) {

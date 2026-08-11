@@ -3,6 +3,7 @@
 import {
   h, btn, setScreen, setActions, renderBoard, revealLetter, revealAll, verdictCard,
   Timer, timerDisplay, attachCountdownAudio, showInterrupt, ding, buzzer, selfScore, primeAudio, after,
+  screenOpts,
 } from '../ui.js';
 import { pickCategoryTriple, pickBonusCategory, pickBonusPuzzle, shuffle } from '../data.js';
 import { logResult, settings } from '../store.js';
@@ -158,12 +159,16 @@ function rankingCard(offered, best, picked) {
 // Drill 4 -- BONUS LETTER SET
 // ---------------------------------------------------------------------------
 
+// R S T L N E are not in the grid at all -- they are already on the board, so
+// they are shown as information above it. Four keys per row keeps every
+// pickable target comfortably over 60px wide on the narrowest iPhone.
 const CONSONANT_ROWS = [
-  ['B', 'C', 'D', 'F', 'G', 'H', 'J'],
-  ['K', 'L', 'M', 'N', 'P', 'Q', 'R'],
-  ['S', 'T', 'V', 'W', 'X', 'Y', 'Z'],
+  ['B', 'C', 'D', 'F'],
+  ['G', 'H', 'J', 'K'],
+  ['M', 'P', 'Q', 'V'],
+  ['W', 'X', 'Y', 'Z'],
 ];
-const VOWEL_ROW = ['A', 'E', 'I', 'O', 'U'];
+const VOWEL_ROW = ['A', 'I', 'O', 'U'];
 
 /** The picker. Returns via onConfirm({consonants, vowel}). */
 export function letterPicker({ onConfirm, confirmLabel = 'LOCK IT IN' }) {
@@ -175,18 +180,15 @@ export function letterPicker({ onConfirm, confirmLabel = 'LOCK IT IN' }) {
       const on = chosen.consonants.includes(l) || chosen.vowel === l;
       el.classList.toggle('on', on);
     }
-    counter.textContent = `${chosen.consonants.length}/3 consonants   ${chosen.vowel ? '1' : '0'}/1 vowel`;
+    counter.textContent = `${chosen.consonants.length} of 3 consonants · ${chosen.vowel ? '1' : '0'} of 1 vowel`;
     confirm.disabled = chosen.consonants.length !== 3 || !chosen.vowel;
   };
 
   const key = (l, isVowel) => {
-    const free = FREE_LETTERS.includes(l);
     const el = h('button', {
-      class: `key${free ? ' free' : ''}${l === 'Y' ? ' y' : ''}`,
+      class: `key${l === 'Y' ? ' y' : ''}`,
       type: 'button',
-      disabled: free,
       onclick: () => {
-        if (free) return;
         if (isVowel) chosen.vowel = chosen.vowel === l ? null : l;
         else if (chosen.consonants.includes(l))
           chosen.consonants = chosen.consonants.filter((c) => c !== l);
@@ -198,17 +200,23 @@ export function letterPicker({ onConfirm, confirmLabel = 'LOCK IT IN' }) {
     return el;
   };
 
-  const counter = h('p', { class: 'center muted', style: { fontWeight: '700' } });
+  const counter = h('span', { class: 'sub' });
   const confirm = btn(confirmLabel, {
-    variant: 'primary tall',
+    variant: 'primary',
     disabled: true,
+    sub: ' ',
     onclick: () => onConfirm({ ...chosen }),
   });
+  confirm.querySelector('.sub').replaceWith(counter);
 
   const node = h('div', { class: 'kb' },
-    h('div', { class: 'kbrow' }, h('div', { class: 'lbl' }, 'Consonants — Y lives here, and picking it does not cost your vowel')),
+    h('div', { class: 'freebar' },
+      h('span', { class: 'lbl2' }, 'Already up'),
+      h('span', { class: 'letters' }, FREE_LETTERS.join(' '))),
+    h('div', { class: 'kbrow' },
+      h('div', { class: 'lbl' }, 'Consonants (Y counts as one)')),
     ...CONSONANT_ROWS.map((row) => h('div', { class: 'kbrow' }, ...row.map((l) => key(l, false)))),
-    h('div', { class: 'kbrow' }, h('div', { class: 'lbl' }, 'Vowel — R S T L N E are already on the board')),
+    h('div', { class: 'kbrow' }, h('div', { class: 'lbl' }, 'Vowel')),
     h('div', { class: 'kbrow' }, ...VOWEL_ROW.map((l) => key(l, true)))
   );
 
@@ -238,10 +246,9 @@ export const bonusLetters = {
     });
 
     setScreen(
-      h('div', { class: 'cat' }, category),
-      h('p', { class: 'center muted' }, 'Three consonants and one vowel.'),
+      h('div', { class: 'cat tight' }, category),
       picker.node,
-      picker.counter
+      screenOpts({ dense: true })
     );
     setActions(picker.confirm);
 
@@ -327,10 +334,10 @@ export const bonusSim = {
     const stagePick = () => {
       const picker = letterPicker({ onConfirm: stageFill });
       setScreen(
-        h('div', { class: 'cat' }, cat),
+        h('div', { class: 'cat tight' }, cat),
         boardWrap,
         picker.node,
-        picker.counter
+        screenOpts({ dense: true })
       );
       setActions(picker.confirm);
     };

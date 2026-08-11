@@ -9,6 +9,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { BONUS_RANKING, BONUS_LETTER_SETS, FREE_LETTERS } from '../js/strategy.js';
+import { DAYS } from '../js/lessons.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
@@ -161,6 +162,49 @@ if (existsSync(namesPath)) {
     }
   }
   if (nameCount < 200) fail(`only ${nameCount} names in the recall tables`);
+}
+
+// --- Session length ---------------------------------------------------------
+// Acceptance criterion: a complete daily session runs 10-15 minutes. Round
+// counts drift easily, so the plan is measured rather than trusted.
+//   [forced, active, read] seconds per round: clock time she cannot skip,
+//   deciding and speaking, and absorbing the feedback card.
+const ROUND_COST = {
+  'solve-or-spin':  [0,  6,  9], 'vowel':          [0,  9,  7],
+  'vowel-names':    [0,  9,  7], 'bonus-category': [2,  1,  6],
+  'bonus-letters':  [0, 11,  8], 'bonus-sim':      [10, 16, 10],
+  'toss-up':        [6,  3,  5], 'name-shape':     [15,  2, 10],
+  'sound-it-out':   [0, 12,  5], 'attention-loop': [26,  6,  8],
+  'say-it-exactly': [0, 11,  2], 'cheat-recital':  [0,  5,  3],
+  'full-game-sim':  [4,  8,  7],
+};
+const BLOCK_OVERHEAD = 13; // tip card + block summary
+
+if (DAYS.length !== 7) fail(`lesson plan has ${DAYS.length} days, expected 7`);
+for (const day of DAYS) {
+  if (day.blocks.length < 3 || day.blocks.length > 6)
+    fail(`day ${day.n} has ${day.blocks.length} blocks, expected 4-6`);
+
+  let seconds = BLOCK_OVERHEAD * day.blocks.length;
+  for (const b of day.blocks) {
+    const cost = ROUND_COST[b.drill.id];
+    if (!cost) {
+      fail(`day ${day.n}: no session-length model for drill "${b.drill.id}"`);
+      continue;
+    }
+    const blockSeconds = cost.reduce((a, c) => a + c, 0) * b.rounds + BLOCK_OVERHEAD;
+    if (blockSeconds > 260)
+      warn(`day ${day.n} block "${b.drill.id}" runs ${(blockSeconds / 60).toFixed(1)} min, over the 4-minute block target`);
+    seconds += cost.reduce((a, c) => a + c, 0) * b.rounds;
+    if (!b.drill.tip?.rule) fail(`drill "${b.drill.id}" has no tip card`);
+    if (typeof b.drill.round !== 'function') fail(`drill "${b.drill.id}" has no round()`);
+  }
+
+  const minutes = seconds / 60;
+  if (minutes < 10 || minutes > 15)
+    fail(`day ${day.n} session is ${minutes.toFixed(1)} min, outside the 10-15 minute band`);
+  if (Math.abs(minutes - day.minutes) > 1.5)
+    fail(`day ${day.n} advertises ${day.minutes} min but models at ${minutes.toFixed(1)} min`);
 }
 
 // --- Service worker precache must cover every shipped file ------------------
