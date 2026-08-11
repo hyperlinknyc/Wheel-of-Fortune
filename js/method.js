@@ -142,6 +142,8 @@ export function methodScreen() {
 
   setActions(
     btn("TODAY'S LESSON", { variant: 'primary tall', onclick: () => { go('#/days'); } }),
-    btn('CUE CARD', { variant: 'ghost', onclick: () => go('#/cheat') })
+    h('div', { class: 'row' },
+      btn('CUE CARD', { variant: 'ghost', onclick: () => go('#/cheat') }),
+      btn('GLOSSARY', { variant: 'ghost', onclick: () => go('#/glossary') }))
   );
 }

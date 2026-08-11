@@ -7,6 +7,7 @@ import { loadBank } from './data.js';
 import * as store from './store.js';
 import { cheatSheetScreen } from './cheatsheet.js';
 import { methodScreen } from './method.js';
+import { glossaryScreen } from './glossary.js';
 import { runBlock } from './drills/common.js';
 import { solveOrSpin, vowelDrill, vowelNameDrill } from './drills/decision.js';
 import { bonusCategory, bonusLetters, bonusSim } from './drills/bonus.js';
@@ -213,6 +214,7 @@ async function boot() {
   route('practice', practiceScreen);
   route('cheat', cheatSheetScreen);
   route('method', methodScreen);
+  route('glossary', glossaryScreen);
   route('settings', settingsScreen);
   route('days', () => import('./lessons.js').then((m) => m.lessonTreeScreen()));
   route('day/:n', ({ n }) => runDay(Number(n)));

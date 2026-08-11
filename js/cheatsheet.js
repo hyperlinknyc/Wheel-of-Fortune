@@ -128,6 +128,8 @@ export function cheatSheetScreen() {
 
   setActions(
     btn('BACK TO PRACTICE', { variant: 'primary tall', onclick: () => go('#/practice') }),
-    btn('THE METHOD', { variant: 'ghost', onclick: () => go('#/method') })
+    h('div', { class: 'row' },
+      btn('GLOSSARY', { variant: 'ghost', onclick: () => go('#/glossary') }),
+      btn('THE METHOD', { variant: 'ghost', onclick: () => go('#/method') }))
   );
 }

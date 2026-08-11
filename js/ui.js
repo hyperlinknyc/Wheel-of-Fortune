@@ -508,7 +508,7 @@ function syncNav(raw) {
   const active = ({
     home: 'home', settings: 'home', days: 'home', day: 'home', method: 'home',
     practice: 'practice', drill: 'practice',
-    cheat: 'cheat',
+    cheat: 'cheat', glossary: 'cheat',
   })[section] || 'home';
   for (const b of document.querySelectorAll('.util[data-nav]')) {
     b.classList.toggle('accent', b.dataset.nav === active);
