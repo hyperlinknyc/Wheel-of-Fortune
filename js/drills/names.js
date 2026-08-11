@@ -7,7 +7,7 @@ import {
 } from '../ui.js';
 import { pick } from '../data.js';
 import { logResult } from '../store.js';
-import { MISTAKES } from '../strategy.js';
+import { MISTAKES, tipFrom, REFLEXES } from '../strategy.js';
 
 let NAMES = null;
 async function names() {
@@ -29,10 +29,9 @@ export const nameShape = {
   id: 'name-shape',
   title: 'NAME SHAPE RECALL',
   minutes: 3,
-  tip: {
-    rule: 'A blank shape plus a category should fire off names, not silence.',
-    example: 'Four letters, man\'s first name: JOHN, MARK, PAUL, GARY, FRED, CARL. Keep going until the clock stops.',
-  },
+  tip: tipFrom(REFLEXES.soundNames, {
+    example: 'Four letters, man\'s first name: JOHN, MARK, PAUL, GARY, FRED, CARL. Keep firing until the clock stops.',
+  }),
   summaryLine: (rs) => {
     const hits = rs.reduce((s, r) => s + (r.meta?.hits ?? 0), 0);
     return `${hits} names fired across ${rs.length} shapes.`;
@@ -112,10 +111,9 @@ export const soundItOut = {
   id: 'sound-it-out',
   title: 'SOUND IT OUT',
   minutes: 3,
-  tip: {
-    rule: 'Read the board aloud as sounds, not as letters.',
-    example: '_ A _ _ A   _ H I _ E is "uh-AH-uh-ah ... hmm-HIGH-uh". Recognition of names is auditory.',
-  },
+  tip: tipFrom(REFLEXES.soundNames, {
+    example: '_ A _ _ A   _ H I _ E → "uh-AH-uh-ah … hmm-HIGH-uh". Say it until a name clicks.',
+  }),
   summaryLine: (rs) => `${rs.filter((r) => r.correct).length} of ${rs.length} came to you out loud.`,
 
   round({ next }) {
@@ -181,10 +179,9 @@ export const sayItExactly = {
   id: 'say-it-exactly',
   title: 'SAY IT EXACTLY',
   minutes: 3,
-  tip: {
-    rule: 'Full articulation, 80% speed. Every word, in order, nothing extra, clear ending.',
+  tip: tipFrom(REFLEXES.sayExactly, {
     example: 'This is the drill that saves the car. It is meant to be tedious.',
-  },
+  }),
   summaryLine: (rs) => `${rs.filter((r) => r.correct).length} of ${rs.length} clean.`,
 
   round({ next }) {

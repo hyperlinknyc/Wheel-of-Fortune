@@ -1,5 +1,8 @@
 // The seven-day plan. Locked-until-previous-complete, with Practice Anything
 // always available in the bottom bar -- she is an adult on a deadline.
+//
+// Each day installs ONE reflex (cue + why). Math stays in strategy.js and
+// behind "Show the math" — never as the primary teaching surface.
 
 import { h, btn, setScreen, setActions, setTop, go, card, primeAudio } from './ui.js';
 import * as store from './store.js';
@@ -8,7 +11,7 @@ import { solveOrSpin, vowelDrill, vowelNameDrill } from './drills/decision.js';
 import { bonusCategory, bonusLetters, bonusSim } from './drills/bonus.js';
 import { tossUp, attentionLoop } from './drills/attention.js';
 import { nameShape, soundItOut, sayItExactly } from './drills/names.js';
-import { BONUS_RANKING, MISTAKES, COPIES_DIVISOR } from './strategy.js';
+import { MISTAKES, REFLEXES, tipFrom } from './strategy.js';
 
 // ---------------------------------------------------------------------------
 // Composite drills used only by the plan
@@ -30,53 +33,52 @@ const fullGameSim = mixedDrill({
   id: 'full-game-sim',
   title: 'FULL GAME',
   minutes: 5,
-  tip: {
-    rule: 'Everything, in the order it happens on stage, with no warning which is coming.',
-    example: 'Toss-up, then the wheel, then the bonus. Same rules, mixed up.',
-  },
+  tip: tipFrom(REFLEXES.attentionLoop, {
+    example: 'Toss-up, then the wheel, then the bonus. Same cues, mixed up — no warning which is coming.',
+  }),
   drills: [tossUp, solveOrSpin, vowelDrill, bonusCategory, bonusSim],
 });
 
-/** Day 7: say the rules out loud. No new material on taper day. */
+/** Day 7: say the CUES out loud. No new material on taper day. */
 const RECITAL = [
-  { q: 'Pot over $9,000?', a: 'Solve. No exceptions.' },
-  { q: 'Copies needed to justify a spin?', a: `Pot ÷ ${COPIES_DIVISOR}, rounded up.` },
-  { q: 'Proper-name category, and you recognise it?', a: 'Solve. Never milk a name.' },
-  { q: 'Before you buy a vowel?', a: 'Finish the sentence: this changes what I do next.' },
-  { q: 'Vowel order on a name?', a: 'A, then O, then E, then I. Before the second consonant.' },
-  { q: 'A name category is offered in the bonus round?', a: 'Take something else. Every time.' },
-  { q: 'Best three bonus categories?', a: BONUS_RANKING.TAKE.slice(0, 3).join(', ') + '.' },
-  { q: 'Default bonus letters?', a: 'H, G, B, and O.' },
-  { q: 'Is Y a consonant?', a: 'Yes. Picking Y does not cost me my vowel.' },
-  { q: 'How much of the bonus board should you expect?', a: 'About 45%. More than half of it stays blank.' },
-  { q: 'What loses the bonus round?', a: 'Silence. Talking always beats thinking.' },
-  { q: 'First thing when you get control?', a: 'The thing I already decided during their turn.' },
+  { q: 'You know the answer?', a: REFLEXES.solveKnown.cue },
+  { q: 'Pot over $9,000?', a: REFLEXES.potCap.cue },
+  { q: 'Proper-name category and you recognise it?', a: REFLEXES.nameSolve.cue },
+  { q: 'Before you buy a vowel?', a: REFLEXES.vowelReason.cue },
+  { q: 'Vowel on a name?', a: REFLEXES.nameVowel.cue },
+  { q: 'A name category is offered in the bonus round?', a: REFLEXES.bonusAvoidName.cue },
+  { q: 'Default bonus letters?', a: REFLEXES.bonusLetters.cue },
+  { q: 'Is Y a consonant?', a: REFLEXES.yConsonant.cue },
+  { q: 'Bonus board looks half blank?', a: REFLEXES.bonusTalk.cue },
+  { q: 'Toss-up board almost full?', a: REFLEXES.tossBuzz.cue },
+  { q: 'Opponent is playing — what do you run?', a: REFLEXES.attentionLoop.cue },
+  { q: 'Saying the solve?', a: REFLEXES.sayExactly.cue },
 ];
 
 const cheatRecital = {
   id: 'cheat-recital',
-  title: 'RECITE THE RULES',
+  title: 'RECITE THE CUES',
   minutes: 4,
-  tip: {
-    rule: 'Say the answer out loud before you tap. Out loud is the whole exercise.',
-    example: 'Taper day. Nothing new. Just make the rules automatic.',
-  },
-  summaryLine: () => 'Rules recited. That is taper day done.',
+  tip: tipFrom(REFLEXES.sayExactly, {
+    example: 'Taper day. Nothing new. Say the cue out loud before you tap.',
+  }),
+  summaryLine: () => 'Cues recited. That is taper day done.',
   round({ index, next }) {
     const item = RECITAL[(index - 1) % RECITAL.length];
     setScreen(
-      card(h('h3', {}, 'Say it out loud'), h('h2', { style: { fontSize: '26px' } }, item.q))
+      card(h('h3', {}, 'Say the cue out loud'), h('p', { class: 'cue' }, item.q))
     );
-    setActions(btn('SHOW THE ANSWER', {
+    setActions(btn('SHOW THE CUE', {
       variant: 'primary tall',
       onclick: () => {
         setScreen(
-          card(h('h3', {}, item.q),
-            h('h2', { style: { fontSize: '26px', color: 'var(--accent)' } }, item.a))
+          card(
+            h('h3', {}, item.q),
+            h('p', { class: 'cue', style: { color: 'var(--accent)' } }, item.a))
         );
         setActions(
           btn('I HAD IT', { variant: 'good tall', onclick: () => log(true) }),
-          btn("SAY IT AGAIN", { variant: 'ghost', onclick: () => log(false) })
+          btn('SAY IT AGAIN', { variant: 'ghost', onclick: () => log(false) })
         );
       },
     }));
@@ -92,7 +94,7 @@ const cheatRecital = {
 };
 
 // ---------------------------------------------------------------------------
-// The plan
+// The plan — one reflex per day
 // ---------------------------------------------------------------------------
 
 const B = (drill, rounds) => ({ drill, rounds });
@@ -100,50 +102,57 @@ const B = (drill, rounds) => ({ drill, rounds });
 export const DAYS = [
   {
     n: 1,
-    theme: 'The bonus round is decided before it starts',
-    blurb: 'Category choice first, then the ten seconds. Plus a baseline on everything else.',
+    theme: 'Name offered — take anything else',
+    blurb: 'Install the bonus-category reflex first, then light reps on solve and vowels.',
+    reflex: REFLEXES.bonusAvoidName,
     minutes: 12,
     blocks: [B(bonusCategory, 15), B(bonusSim, 4), B(solveOrSpin, 9), B(vowelDrill, 9), B(tossUp, 7)],
   },
   {
     n: 2,
-    theme: 'The solve trigger',
-    blurb: 'When to stop spinning, and when a vowel is worth $250.',
+    theme: 'If you know it — solve',
+    blurb: 'Stop milking known answers. Attach a next-action reason before every vowel.',
+    reflex: REFLEXES.solveKnown,
     minutes: 12,
     blocks: [B(solveOrSpin, 12), B(vowelDrill, 12), B(solveOrSpin, 10), B(vowelNameDrill, 9)],
   },
   {
     n: 3,
-    theme: 'Proper names: people',
-    blurb: 'Shapes, sounds, and buying the vowel that tells you the spelling.',
+    theme: 'Names: sounds, then the vowel',
+    blurb: 'People-shaped boards. Fire names out loud. Buy the spelling vowel early.',
+    reflex: REFLEXES.nameVowel,
     minutes: 12,
     blocks: [B(nameShape, 6), B(soundItOut, 7), B(vowelNameDrill, 8), B(nameShape, 6), B(soundItOut, 6)],
   },
   {
     n: 4,
-    theme: 'Attention has a job',
-    blurb: 'Run the loop during their turn. Find your buzz threshold.',
+    theme: 'Their turn: longest · guess · action',
+    blurb: 'Give attention a job. Find the buzz half-beat.',
+    reflex: REFLEXES.attentionLoop,
     minutes: 12,
     blocks: [B(attentionLoop, 3), B(tossUp, 10), B(attentionLoop, 3), B(tossUp, 10), B(attentionLoop, 3)],
   },
   {
     n: 5,
-    theme: 'Proper names: places, titles, structures',
-    blurb: 'The categories that cost the most, and the letter sets that rescue them.',
+    theme: 'Places, titles, letter overrides',
+    blurb: 'Name-heavy boards again — plus the bonus letter sets that rescue them.',
+    reflex: REFLEXES.bonusLetters,
     minutes: 12,
     blocks: [B(nameShape, 6), B(soundItOut, 7), B(bonusLetters, 9), B(bonusCategory, 12), B(solveOrSpin, 7)],
   },
   {
     n: 6,
-    theme: 'Full dress',
-    blurb: 'Everything, mixed, in stage order. Then say it exactly.',
+    theme: 'Full dress — cues under fire',
+    blurb: 'Everything mixed in stage order. Then say it exactly.',
+    reflex: REFLEXES.sayExactly,
     minutes: 11,
     blocks: [B(bonusSim, 5), B(tossUp, 11), B(fullGameSim, 11), B(sayItExactly, 7)],
   },
   {
     n: 7,
-    theme: 'Taper — light, no new material',
-    blurb: 'Short reps on what you already know, clean articulation, cheat sheet out loud.',
+    theme: 'Taper — recite the cues',
+    blurb: 'Light. No new material. Cues out loud, clean articulation.',
+    reflex: REFLEXES.solveKnown,
     minutes: 10,
     blocks: [B(bonusCategory, 20), B(solveOrSpin, 10), B(sayItExactly, 10), B(cheatRecital, 12)],
   },
@@ -161,7 +170,7 @@ export function lessonTreeScreen() {
 
   setScreen(
     h('p', { class: 'muted' },
-      `${store.daysUntilTaping()} days until taping. Each day is 10 to 15 minutes.`),
+      `${store.daysUntilTaping()} days until taping. Each day installs one reflex.`),
     ...DAYS.map((d) => {
       const done = store.isDayComplete(d.n);
       const locked = d.n > unlocked;
@@ -175,17 +184,17 @@ export function lessonTreeScreen() {
           go('#/day/' + d.n);
         },
       },
-        h('div', { class: 'n' }, done ? '✓' : String(d.n)),
+        h('div', { class: 'n' }, String(d.n)),
         h('div', { class: 't' },
           h('b', {}, d.theme),
-          h('span', {}, locked
-            ? `Finish day ${d.n - 1} first`
-            : `${d.blocks.length} blocks · ${d.minutes} min${doneBlocks && !done ? ` · ${doneBlocks} done` : ''}`)));
+          h('span', {}, locked ? `Finish day ${d.n - 1} first`
+            : done ? `Done · ${d.minutes} min`
+              : `${d.blocks.length} blocks · ${d.minutes} min · ${doneBlocks}/${d.blocks.length}`)));
     }),
-    card(
-      h('h3', {}, 'Not in the mood for the plan?'),
-      h('p', { class: 'muted' }, 'Practice Anything is in the bar at the bottom. Nothing is ever locked there.'))
+    h('p', { class: 'muted', style: { marginTop: '8px' } },
+      'Practice Anything is in the bar at the bottom. Not locked.')
   );
+
   setActions(btn(store.isDayComplete(unlocked) ? 'REVIEW' : `START DAY ${unlocked}`, {
     variant: 'primary tall',
     onclick: () => { primeAudio(); go('#/day/' + unlocked); },
@@ -202,8 +211,9 @@ export function runDay(n) {
     setTop({ title: `DAY ${n}`, back: () => go('#/days') });
     setScreen(
       card(
-        h('h3', {}, `Day ${n}`),
-        h('h1', {}, day.theme),
+        h('h3', {}, `Day ${n} · today's reflex`),
+        h('p', { class: 'cue' }, day.reflex.cue),
+        h('p', { class: 'why' }, day.reflex.why),
         h('p', { class: 'muted' }, day.blurb)),
       card(
         h('h3', {}, 'Today'),
@@ -237,26 +247,26 @@ export function runDay(n) {
       h('div', { class: 'card center', style: { borderColor: 'var(--good)' } },
         h('h3', {}, `Day ${n} complete`),
         h('div', { class: 'big-num', style: { color: 'var(--good)' } }, '✓'),
-        h('p', {}, day.theme),
+        h('p', { class: 'cue', style: { fontSize: '20px' } }, day.reflex.cue),
         h('p', { class: 'muted' }, `${Math.round((Date.now() - started) / 60000)} minutes.`)),
       planCard ? h('div', { class: 'card', style: { borderColor: 'var(--accent)' } },
         h('h3', {}, planCard.title),
         h('p', {}, planCard.because),
         h('p', { class: 'muted' }, planCard.change)) : null,
       n < 7 ? card(
-        h('h3', {}, 'Tomorrow'),
-        h('p', {}, DAYS[n].theme),
-        h('p', { class: 'muted' }, DAYS[n].blurb)) : card(
+        h('h3', {}, 'Tomorrow\'s reflex'),
+        h('p', { class: 'cue', style: { fontSize: '20px' } }, DAYS[n].reflex.cue),
+        h('p', { class: 'why' }, DAYS[n].reflex.why)) : card(
         h('h3', {}, 'That is the plan'),
-        h('p', {}, 'Open the cheat sheet in the green room. Nothing new before you tape.'))
+        h('p', {}, 'Open the cue card in the green room. Nothing new before you tape.'))
     );
     setActions(
       btn('HOME', { variant: 'primary tall', onclick: () => go('#/home') }),
-      btn('CHEAT SHEET', { variant: 'ghost', onclick: () => go('#/cheat') })
+      btn('CUE CARD', { variant: 'ghost', onclick: () => go('#/cheat') })
     );
   };
 
   intro();
 }
 
-export { MISTAKES };
+export { MISTAKES, REFLEXES };

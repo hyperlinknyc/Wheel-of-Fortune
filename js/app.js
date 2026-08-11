@@ -15,17 +15,17 @@ import { DAYS, todaysDayNumber, runDay } from './lessons.js';
 import { micSupported, requestMic, releaseMic } from './voice.js';
 
 export const DRILLS = {
-  'solve-or-spin': { drill: solveOrSpin, rounds: 6, blurb: 'When to stop spinning' },
-  'vowel': { drill: vowelDrill, rounds: 6, blurb: 'Buy with a reason or not at all' },
-  'vowel-names': { drill: vowelNameDrill, rounds: 6, blurb: 'Vowels on name puzzles' },
-  'bonus-category': { drill: bonusCategory, rounds: 8, blurb: 'Three seconds, one choice' },
-  'bonus-letters': { drill: bonusLetters, rounds: 6, blurb: 'Three consonants and a vowel' },
-  'bonus-sim': { drill: bonusSim, rounds: 3, blurb: 'The full ten seconds' },
-  'toss-up': { drill: tossUp, rounds: 6, blurb: 'Find your buzz threshold' },
-  'name-shape': { drill: nameShape, rounds: 5, blurb: 'Fire off names by shape' },
-  'sound-it-out': { drill: soundItOut, rounds: 5, blurb: 'Read names as sounds' },
-  'attention-loop': { drill: attentionLoop, rounds: 3, blurb: 'Stay in the round' },
-  'say-it-exactly': { drill: sayItExactly, rounds: 4, blurb: 'The drill that saves the car' },
+  'solve-or-spin': { drill: solveOrSpin, rounds: 6, blurb: 'If you know it — solve' },
+  'vowel': { drill: vowelDrill, rounds: 6, blurb: 'This changes what I do next — or don\'t buy' },
+  'vowel-names': { drill: vowelNameDrill, rounds: 6, blurb: 'Name? Vowel before the second consonant' },
+  'bonus-category': { drill: bonusCategory, rounds: 8, blurb: 'Name offered — take anything else' },
+  'bonus-letters': { drill: bonusLetters, rounds: 6, blurb: 'H, G, B + O — unless category overrides' },
+  'bonus-sim': { drill: bonusSim, rounds: 3, blurb: 'Talk the whole ten. Silence loses.' },
+  'toss-up': { drill: tossUp, rounds: 6, blurb: 'Board almost full — buzz a half-beat early' },
+  'name-shape': { drill: nameShape, rounds: 5, blurb: 'Fire names from the blank shape' },
+  'sound-it-out': { drill: soundItOut, rounds: 5, blurb: 'Names: say sounds, not letter names' },
+  'attention-loop': { drill: attentionLoop, rounds: 3, blurb: 'Their turn: longest · guess · action' },
+  'say-it-exactly': { drill: sayItExactly, rounds: 4, blurb: 'Every word, in order, clear ending' },
 };
 
 // ---------------------------------------------------------------------------
