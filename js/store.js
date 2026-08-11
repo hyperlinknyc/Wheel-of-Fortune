@@ -53,6 +53,7 @@ function blank() {
     plan: { weights: null, lastRecomputeCount: 0, card: null, history: [] },
     recent: [],
     settings: { mic: false },
+    progress: {},
   };
 }
 
@@ -159,6 +160,44 @@ export function markDayComplete(dayNumber) {
   const l = (state.lessons[dayNumber] ??= { blocks: {}, done: false });
   l.done = true;
   flush(); // milestone: unlocking the next day must survive a hard close
+}
+
+// ---------------------------------------------------------------------------
+// In-progress round state within a block.
+//
+// markBlockComplete only records a block once every round in it is done --
+// closing the app mid-block (a phone call, a locked screen, backgrounding
+// to check something else) previously lost whatever rounds were already
+// finished, because runBlock's round counter lived only in a JS closure.
+// This persists it after every round, keyed by exactly where the rounds are
+// running: a day's block position, or a drill id for Practice Anything.
+// ---------------------------------------------------------------------------
+
+export const dayBlockKey = (dayNumber, blockIndex) => `day:${dayNumber}:${blockIndex}`;
+export const practiceKey = (drillId) => `practice:${drillId}`;
+
+export function saveRoundProgress(key, { index, total, results }) {
+  state.progress[key] = { index, total, results, ts: Date.now() };
+  flush(); // must survive a hard close at any moment, not just at block end
+}
+
+/** Returns null if there is nothing to resume, or if it no longer matches
+ *  the block's current shape (e.g. round count changed between app versions). */
+export function loadRoundProgress(key, expectedTotal) {
+  const p = state.progress[key];
+  if (!p || p.total !== expectedTotal || !p.index || p.index >= p.total) return null;
+  return p;
+}
+
+export function clearRoundProgress(key) {
+  if (key in state.progress) {
+    delete state.progress[key];
+    save();
+  }
+}
+
+export function clearDayRoundProgress(dayNumber, blockCount) {
+  for (let i = 0; i < blockCount; i++) clearRoundProgress(dayBlockKey(dayNumber, i));
 }
 
 export const isDayComplete = (n) => !!state.lessons[n]?.done;

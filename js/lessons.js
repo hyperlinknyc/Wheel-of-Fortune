@@ -215,10 +215,26 @@ export function runDay(n) {
   const doneCount = firstUnfinished === -1 ? day.blocks.length : firstUnfinished;
   let i = doneCount;
 
+  // A block can be mid-way through its own rounds without being "done" at
+  // all -- doneCount alone would miss that (it only counts whole blocks),
+  // and the intro screen would say BEGIN while actually about to resume
+  // partway through block 1, which reads as a lie even though no progress
+  // is lost.
+  const nextBlock = day.blocks[doneCount];
+  const partial = nextBlock
+    ? store.loadRoundProgress(store.dayBlockKey(n, doneCount), nextBlock.rounds)
+    : null;
+
   const intro = () => {
     setTop({ title: `DAY ${n}`, back: () => go('#/days') });
-    const resuming = doneCount > 0 && doneCount < day.blocks.length;
+    const resuming = (doneCount > 0 || !!partial) && doneCount < day.blocks.length;
     const allDone = doneCount === day.blocks.length && day.blocks.length > 0;
+    const resumeMessage = !resuming ? null
+      : partial
+        ? (doneCount > 0
+            ? `${doneCount} of ${day.blocks.length} block${doneCount === 1 ? '' : 's'} done today, plus ${partial.index} of ${partial.total} rounds into block ${doneCount + 1}. Picking back up right there.`
+            : `${partial.index} of ${partial.total} rounds done in block ${doneCount + 1} today. Picking back up right there.`)
+        : `${doneCount} of ${day.blocks.length} blocks already done today. Resuming at block ${doneCount + 1}.`;
     setScreen(
       card(
         h('h3', {}, `Day ${n} · today's reflex`),
@@ -227,7 +243,7 @@ export function runDay(n) {
         h('p', { class: 'muted' }, day.blurb)),
       resuming ? h('div', { class: 'card', style: { borderColor: 'var(--accent)' } },
         h('h3', {}, 'Welcome back'),
-        h('p', {}, `${doneCount} of ${day.blocks.length} blocks already done today. Resuming at block ${doneCount + 1}.`)) : null,
+        h('p', {}, resumeMessage)) : null,
       allDone ? h('div', { class: 'card', style: { borderColor: 'var(--good)' } },
         h('h3', {}, 'Already done'),
         h('p', {}, 'Every block in this day is complete. Go again from the top, or head back.')) : null,
@@ -240,13 +256,26 @@ export function runDay(n) {
             h('span', { class: 'v' }, `${b.rounds}`))))
     );
     setActions(
-      btn(allDone ? 'GO AGAIN FROM THE TOP' : resuming ? `RESUME AT BLOCK ${doneCount + 1}` : 'BEGIN', {
+      btn(allDone ? 'GO AGAIN FROM THE TOP'
+        : resuming ? (doneCount > 0 ? `RESUME AT BLOCK ${doneCount + 1}` : 'RESUME WHERE YOU LEFT OFF')
+          : 'BEGIN', {
         variant: 'primary tall',
-        onclick: () => { primeAudio(); if (allDone) i = 0; runNext(); },
+        onclick: () => {
+          primeAudio();
+          // A full replay starts clean -- any mid-block rounds left over
+          // from a prior pass through this day should not silently resume.
+          if (allDone) { i = 0; store.clearDayRoundProgress(n, day.blocks.length); }
+          runNext();
+        },
       }),
       resuming ? btn('START THIS DAY OVER INSTEAD', {
         variant: 'ghost',
-        onclick: () => { primeAudio(); i = 0; runNext(); },
+        onclick: () => {
+          primeAudio();
+          i = 0;
+          store.clearDayRoundProgress(n, day.blocks.length);
+          runNext();
+        },
       }) : null
     );
   };

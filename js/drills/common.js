@@ -1,7 +1,10 @@
 // Shared drill scaffolding: block runner, pot generation, board states.
 
 import { h, btn, setScreen, setActions, setTop, tipCard, primeAudio, cancelPending } from '../ui.js';
-import { markBlockComplete } from '../store.js';
+import {
+  markBlockComplete, dayBlockKey, practiceKey,
+  saveRoundProgress, loadRoundProgress, clearRoundProgress,
+} from '../store.js';
 import { RSTLNE_MAIN_COVERAGE } from '../strategy.js';
 
 const CONSONANTS = 'BCDFGHJKLMNPQRSTVWXYZ'.split('');
@@ -10,26 +13,46 @@ const VOWELS = 'AEIOU'.split('');
 /**
  * Runs one drill block: tip card, then N rounds, then a summary.
  * Each drill supplies `round(ctx)`, which calls ctx.next(result) when done.
+ *
+ * Round position is persisted after every round, not just at the end, so
+ * closing the app mid-block -- a phone call, a locked screen, switching to
+ * check something else -- does not throw away rounds already finished. It
+ * is deliberately kept even if she backs out early; only a genuine finish
+ * clears it. Works the same way from Practice Anything (keyed by drill id)
+ * as it does from a lesson day (keyed by day + block position).
  */
 export function runBlock({ drill, rounds = 6, dayNumber = null, blockIndex = null, onDone }) {
   const started = Date.now();
-  const results = [];
-  let i = 0;
+  const key = dayNumber != null && blockIndex != null
+    ? dayBlockKey(dayNumber, blockIndex)
+    : practiceKey(drill.id);
+
+  const saved = loadRoundProgress(key, rounds);
+  const results = saved ? [...saved.results] : [];
+  let i = saved ? saved.index : 0;
+  const resumed = !!saved;
 
   const showTip = () => {
     setTop({ title: drill.title, back: () => onDone?.({ aborted: true, results }) });
     setScreen(
       tipCard(drill.tip, start),
-      h('p', { class: 'muted center' }, `${rounds} rounds. About ${drill.minutes ?? 3} minutes.`)
+      resumed
+        ? h('p', { class: 'muted center' }, `Picking back up at round ${i + 1} of ${rounds} — ${i} already done.`)
+        : h('p', { class: 'muted center' }, `${rounds} rounds. About ${drill.minutes ?? 3} minutes.`)
     );
-    setActions(btn('GOT IT — START', { variant: 'primary tall', onclick: () => { primeAudio(); start(); } }));
+    setActions(btn(resumed ? 'CONTINUE — START' : 'GOT IT — START', {
+      variant: 'primary tall', onclick: () => { primeAudio(); start(); },
+    }));
   };
 
   const start = () => next();
 
   const next = (result) => {
     cancelPending();
-    if (result) results.push(result);
+    if (result) {
+      results.push(result);
+      if (i < rounds) saveRoundProgress(key, { index: i, total: rounds, results });
+    }
     if (i >= rounds) return finish();
     i++;
     setTop({
@@ -42,6 +65,7 @@ export function runBlock({ drill, rounds = 6, dayNumber = null, blockIndex = nul
 
   const finish = () => {
     cancelPending();
+    clearRoundProgress(key);
     const correct = results.filter((r) => r.correct).length;
     const elapsed = Date.now() - started;
     // Keyed by position in the day, not drill.id: several days repeat the
