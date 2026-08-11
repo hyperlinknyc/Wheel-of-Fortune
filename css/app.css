@@ -336,8 +336,8 @@ p  { margin: 0 0 10px; }
   margin-top: 12px; border-top: 1px solid var(--line); padding-top: 8px;
 }
 .math-disclosure > summary {
-  min-height: 48px; display: flex; align-items: center;
-  font-size: 16px; font-weight: 800; letter-spacing: .04em;
+  min-height: 60px; display: flex; align-items: center;
+  font-size: 17px; font-weight: 800; letter-spacing: .04em;
   color: var(--accent); cursor: pointer; list-style: none;
   touch-action: manipulation;
 }
