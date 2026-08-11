@@ -142,12 +142,15 @@ export function logResult(r) {
   return rec;
 }
 
-export function markBlockComplete(dayNumber, blockId, elapsedMs = 0) {
+// blockIndex is the block's position within the day, not drill.id -- several
+// days repeat the same drill as separate blocks, so an id-keyed complete
+// would falsely mark every occurrence done the moment the first one is.
+export function markBlockComplete(dayNumber, blockIndex, elapsedMs = 0) {
   const l = (state.lessons[dayNumber] ??= { blocks: {}, done: false });
-  l.blocks[blockId] = true;
+  l.blocks[blockIndex] = true;
   const day = (state.days[todayKey()] ??= { drills: 0, ms: 0, blocks: [] });
   day.ms += elapsedMs;
-  if (!day.blocks.includes(`${dayNumber}:${blockId}`)) day.blocks.push(`${dayNumber}:${blockId}`);
+  if (!day.blocks.includes(`${dayNumber}:${blockIndex}`)) day.blocks.push(`${dayNumber}:${blockIndex}`);
   touchStreak();
   flush(); // milestone: write it now, not on a 250ms debounce
 }
@@ -159,7 +162,7 @@ export function markDayComplete(dayNumber) {
 }
 
 export const isDayComplete = (n) => !!state.lessons[n]?.done;
-export const isBlockComplete = (n, id) => !!state.lessons[n]?.blocks?.[id];
+export const isBlockComplete = (n, blockIndex) => !!state.lessons[n]?.blocks?.[blockIndex];
 
 export function highestUnlockedDay() {
   for (let d = 1; d <= 7; d++) if (!isDayComplete(d)) return d;

@@ -10,7 +10,7 @@ const VOWELS = 'AEIOU'.split('');
  * Runs one drill block: tip card, then N rounds, then a summary.
  * Each drill supplies `round(ctx)`, which calls ctx.next(result) when done.
  */
-export function runBlock({ drill, rounds = 6, dayNumber = null, onDone }) {
+export function runBlock({ drill, rounds = 6, dayNumber = null, blockIndex = null, onDone }) {
   const started = Date.now();
   const results = [];
   let i = 0;
@@ -43,7 +43,10 @@ export function runBlock({ drill, rounds = 6, dayNumber = null, onDone }) {
     cancelPending();
     const correct = results.filter((r) => r.correct).length;
     const elapsed = Date.now() - started;
-    if (dayNumber) markBlockComplete(dayNumber, drill.id, elapsed);
+    // Keyed by position in the day, not drill.id: several days repeat the
+    // same drill as separate blocks (e.g. Day 2 runs solveOrSpin twice), and
+    // an id-keyed complete would falsely mark the second occurrence done too.
+    if (dayNumber && blockIndex != null) markBlockComplete(dayNumber, blockIndex, elapsed);
     setTop({ title: drill.title });
     setScreen(
       h('div', { class: 'card center' },

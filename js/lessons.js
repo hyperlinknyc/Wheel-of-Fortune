@@ -175,7 +175,7 @@ export function lessonTreeScreen() {
       const done = store.isDayComplete(d.n);
       const locked = d.n > unlocked;
       const cls = done ? 'day done' : d.n === unlocked ? 'day current' : locked ? 'day locked' : 'day';
-      const doneBlocks = d.blocks.filter((b) => store.isBlockComplete(d.n, b.drill.id)).length;
+      const doneBlocks = d.blocks.filter((b, idx) => store.isBlockComplete(d.n, idx)).length;
       return h('button', {
         class: cls, type: 'button',
         onclick: () => {
@@ -207,34 +207,59 @@ export function lessonTreeScreen() {
 export function runDay(n) {
   const day = DAYS[n - 1];
   if (!day) return go('#/days');
-  let i = 0;
   const started = Date.now();
+
+  // Resume at the first block not yet marked complete, not always block 0 --
+  // closing the app mid-day and coming back must not repeat finished work.
+  const firstUnfinished = day.blocks.findIndex((b, idx) => !store.isBlockComplete(n, idx));
+  const doneCount = firstUnfinished === -1 ? day.blocks.length : firstUnfinished;
+  let i = doneCount;
 
   const intro = () => {
     setTop({ title: `DAY ${n}`, back: () => go('#/days') });
+    const resuming = doneCount > 0 && doneCount < day.blocks.length;
+    const allDone = doneCount === day.blocks.length && day.blocks.length > 0;
     setScreen(
       card(
         h('h3', {}, `Day ${n} · today's reflex`),
         h('p', { class: 'cue' }, day.reflex.cue),
         h('p', { class: 'why' }, day.reflex.why),
         h('p', { class: 'muted' }, day.blurb)),
+      resuming ? h('div', { class: 'card', style: { borderColor: 'var(--accent)' } },
+        h('h3', {}, 'Welcome back'),
+        h('p', {}, `${doneCount} of ${day.blocks.length} blocks already done today. Resuming at block ${doneCount + 1}.`)) : null,
+      allDone ? h('div', { class: 'card', style: { borderColor: 'var(--good)' } },
+        h('h3', {}, 'Already done'),
+        h('p', {}, 'Every block in this day is complete. Go again from the top, or head back.')) : null,
       card(
         h('h3', {}, 'Today'),
         ...day.blocks.map((b, idx) =>
           h('div', { class: 'mathline' },
-            h('span', { class: 'l' }, `${idx + 1}. ${b.drill.title}`),
+            h('span', { class: 'l' },
+              `${idx < doneCount ? '✓ ' : ''}${idx + 1}. ${b.drill.title}`),
             h('span', { class: 'v' }, `${b.rounds}`))))
     );
-    setActions(btn('BEGIN', { variant: 'primary tall', onclick: () => { primeAudio(); runNext(); } }));
+    setActions(
+      btn(allDone ? 'GO AGAIN FROM THE TOP' : resuming ? `RESUME AT BLOCK ${doneCount + 1}` : 'BEGIN', {
+        variant: 'primary tall',
+        onclick: () => { primeAudio(); if (allDone) i = 0; runNext(); },
+      }),
+      resuming ? btn('START THIS DAY OVER INSTEAD', {
+        variant: 'ghost',
+        onclick: () => { primeAudio(); i = 0; runNext(); },
+      }) : null
+    );
   };
 
   const runNext = () => {
     if (i >= day.blocks.length) return finish();
+    const blockIndex = i;
     const block = day.blocks[i++];
     runBlock({
       drill: block.drill,
       rounds: block.rounds,
       dayNumber: n,
+      blockIndex,
       onDone: (res) => {
         if (res?.aborted) return go('#/days');
         runNext();
