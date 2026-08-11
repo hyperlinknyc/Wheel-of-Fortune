@@ -187,6 +187,9 @@ export function cancelPending() {
     try { p.cancel(); } catch { /* already gone */ }
   }
   pending.clear();
+  // Discipline interrupt is a live overlay, not a timer — clear it on every
+  // navigation so a mid-drill abandon cannot leave a red sheet on home.
+  hideInterrupt();
 }
 
 /** setTimeout that is cancelled automatically on navigation. */
@@ -333,6 +336,13 @@ export function attachCountdownAudio(timer, from = 3) {
 // Full-screen interrupt -- deliberately unmissable
 // ---------------------------------------------------------------------------
 
+export function hideInterrupt() {
+  const box = typeof document !== 'undefined' ? document.getElementById('interrupt') : null;
+  if (!box) return;
+  box.hidden = true;
+  box.replaceChildren();
+}
+
 export function showInterrupt({ kicker, title, body, button = 'I SEE IT', onClose }) {
   const box = $('#interrupt');
   box.replaceChildren(
@@ -341,7 +351,7 @@ export function showInterrupt({ kicker, title, body, button = 'I SEE IT', onClos
     ...[].concat(body).map((t) => h('p', {}, t)),
     btn(button, {
       onclick: () => {
-        box.hidden = true;
+        hideInterrupt();
         onClose?.();
       },
     })
