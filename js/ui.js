@@ -120,7 +120,7 @@ export function sizeBoard(board) {
   const raw = Math.floor((avail - (longest - 1) * gap - 2) / longest);
   const tile = Math.max(21, Math.min(46, raw));
   board.style.setProperty('--tile', tile + 'px');
-  board.style.setProperty('--tile-font', Math.max(24, Math.round(tile * 1.04)) + 'px');
+  board.style.setProperty('--tile-font', Math.max(26, Math.round(tile * 1.04)) + 'px');
   board.style.gap = `6px ${Math.max(6, gap * 2)}px`;
   for (const w of board.querySelectorAll('.word')) w.style.gap = gap + 'px';
 }
@@ -420,9 +420,23 @@ export const route = (pattern, handler) => routes.push({ parts: pattern.split('/
 export const go = (hash) => { window.location.hash = hash; };
 export const back = () => window.history.back();
 
+/** Highlight the bottom-nav item that owns the current screen. */
+function syncNav(raw) {
+  const section = (raw || 'home').split('/')[0] || 'home';
+  const active = ({
+    home: 'home', settings: 'home', days: 'home', day: 'home',
+    practice: 'practice', drill: 'practice',
+    cheat: 'cheat',
+  })[section] || 'home';
+  for (const b of document.querySelectorAll('.util[data-nav]')) {
+    b.classList.toggle('accent', b.dataset.nav === active);
+  }
+}
+
 export function startRouter(fallback = '#/home') {
   const resolve = () => {
     const raw = (window.location.hash || fallback).replace(/^#\/?/, '');
+    syncNav(raw);
     const parts = raw.split('/');
     for (const r of routes) {
       if (r.parts.length !== parts.length) continue;
