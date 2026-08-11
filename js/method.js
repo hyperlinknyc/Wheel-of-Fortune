@@ -2,9 +2,14 @@
 // Read when she wants the "why behind the madness." Not the green-room cue card;
 // not a timed drill. Calm, blunt, built for an adult who is already a strong solver.
 
-import { h, setScreen, setActions, setTop, btn, go, card } from './ui.js';
+import { h, setScreen, setActions, setTop, btn, go, card, mathDisclosure } from './ui.js';
 import { DAYS } from './lessons.js';
-import { MISTAKES, VOWEL_COST, money } from './strategy.js';
+import {
+  MISTAKES, VOWEL_COST, money, SPIN_DERIVATION, COPIES_DIVISOR, ALWAYS_SOLVE_ABOVE,
+  WEDGE_AVERAGE, TURN_ENDING_ODDS, SURVIVAL_ODDS, CEDED_TURN_COST,
+  RSTLNE_MAIN_COVERAGE, RSTLNE_BONUS_COVERAGE, DEFAULT_SET_COVERAGE, EXPECTED_BOARD_COVERAGE,
+  vowelBreakEven,
+} from './strategy.js';
 
 const section = (title, open, ...body) =>
   h('details', { class: 'acc', ...(open ? { open: true } : {}) },
@@ -132,6 +137,83 @@ export function methodScreen() {
       p('Which wedge she hits. Whether a called letter is on the board. Toss-up race noise when two people buzz together.'),
       p('We train the decisions around those moments — solve timing, category choice, letter sets, buzz threshold, exact speech — not superstition about the wheel.'),
       muted('If a tip cannot change what her hands or mouth do in three seconds, it does not belong in this app.')),
+
+    section('The math, in full', false,
+      muted(
+        'Every cue in this app is a compressed version of an actual calculation. ' +
+        'None of it is folklore or a hot take -- each number below is derived from ' +
+        'how the wheel and the board are actually built. This is the full working, ' +
+        'for whenever you want to check it rather than just trust it.'),
+
+      h('h3', { style: { marginTop: '14px' } }, 'Solve vs. spin'),
+      p(
+        `A standard wheel carries 24 wedges. Two are Bankrupt, one is Lose a Turn -- ` +
+        `three of twenty-four end your turn outright, so a spin keeps your turn about ` +
+        `${(SURVIVAL_ODDS * 100).toFixed(1)}% of the time and ends it about ` +
+        `${(TURN_ENDING_ODDS * 100).toFixed(0)}% of the time.`),
+      p(
+        `Expected gain from one more spin is that survival odds, times a typical wedge ` +
+        `value, times how many copies of the letter you are certain of: ` +
+        `${SURVIVAL_ODDS} × ${money(WEDGE_AVERAGE)} × copies.`),
+      p(
+        `Expected cost is the odds of ending your turn, times the whole pot you would ` +
+        `be walking away from -- doubled, because if you are the best solver at the ` +
+        `table, a turn you hand to an opponent is not neutral. It is a puzzle you would ` +
+        `probably have solved, going to someone who might not have. ` +
+        `${TURN_ENDING_ODDS} doubled is ${CEDED_TURN_COST} × pot.`),
+      p(
+        `Set the two equal and solve for copies: at a ${money(WEDGE_AVERAGE)} average ` +
+        `wedge, that works out to copies = pot ÷ ${COPIES_DIVISOR.toLocaleString()}, ` +
+        `rounded up. Above ${money(ALWAYS_SOLVE_ABOVE)} the required copies get high ` +
+        `enough, fast enough, that treating it as "always solve" is a rounding error, ` +
+        `not a simplification.`),
+      mathDisclosure([
+        { label: 'Wedges that end your turn', value: '3 of 24' },
+        { label: 'Turn survives a spin', value: `${(SURVIVAL_ODDS * 100).toFixed(1)}%` },
+        { label: 'Turn ends on a spin', value: `${(TURN_ENDING_ODDS * 100).toFixed(0)}%, doubled to ${(CEDED_TURN_COST * 100).toFixed(0)}%` },
+        { label: 'Gain per spin', value: `${SURVIVAL_ODDS} × ${money(WEDGE_AVERAGE)} × copies` },
+        { label: 'Cost per spin', value: `${CEDED_TURN_COST} × pot` },
+        { label: 'Copies needed', value: `pot ÷ ${COPIES_DIVISOR.toLocaleString()}` },
+      ], 'Show the full working'),
+
+      h('h3', { style: { marginTop: '16px' } }, 'The vowel buy'),
+      p(
+        `A vowel is a flat ${money(VOWEL_COST)}, and unlike a spin it never risks your ` +
+        `turn -- so the only question is whether it is worth the money. The break-even ` +
+        `is simple: ${money(VOWEL_COST)} divided by the pot. ` +
+        `At a $2,500 pot that is ${(vowelBreakEven(2500) * 100).toFixed(0)}%; at $5,000 ` +
+        `it is ${(vowelBreakEven(5000) * 100).toFixed(0)}%. If buying it does not improve ` +
+        `your odds of solving by at least that much, it is not a bargain just because ` +
+        `it is cheap.`),
+
+      h('h3', { style: { marginTop: '16px' } }, 'Where the bonus-round numbers come from'),
+      p(
+        `RSTLNE -- the six letters given free before you pick -- reveals roughly ` +
+        `${Math.round(RSTLNE_MAIN_COVERAGE * 100)}% of the letters on a typical main-game ` +
+        `board. Bonus-round puzzles are deliberately built to defeat that: this app's own ` +
+        `puzzle bank only marks a board bonus-eligible if RSTLNE would reveal under 35% of ` +
+        `it, matching how those boards are actually constructed. Across the eligible bank, ` +
+        `RSTLNE alone comes in around ${Math.round(RSTLNE_BONUS_COVERAGE * 100)}%.`),
+      p(
+        `The default pick -- H, G, B plus O -- covers about ` +
+        `${Math.round(DEFAULT_SET_COVERAGE * 100)}% of whatever RSTLNE left behind. Layer ` +
+        `that on top of the RSTLNE coverage and total expected coverage is ` +
+        `${RSTLNE_BONUS_COVERAGE.toFixed(3)} + ${DEFAULT_SET_COVERAGE.toFixed(3)} × ` +
+        `(1 − ${RSTLNE_BONUS_COVERAGE.toFixed(3)}) ≈ ${(EXPECTED_BOARD_COVERAGE * 100).toFixed(0)}%. ` +
+        `That is the actual arithmetic behind "expect the board to be less than half full" -- ` +
+        `it is not a comforting exaggeration, it is what the numbers say a normal bonus board looks like.`),
+
+      h('h3', { style: { marginTop: '16px' } }, 'What this app does and does not do with the numbers'),
+      p(
+        'None of this is published Wheel of Fortune statistics -- there is no public ' +
+        'dataset of wedge outcomes or letter reveals to draw on. It is built from what ' +
+        'is knowable directly: how many wedges are on a standard wheel and what they ' +
+        'are, how a vowel is priced, and a hand-built puzzle bank filtered to match how ' +
+        'bonus boards are actually constructed. Where a number depends on judgment ' +
+        '(the $700 average wedge, doubling the cost of a ceded turn for a strong ' +
+        'solver) that judgment is stated plainly above rather than hidden inside a ' +
+        'constant, so it can be argued with instead of just trusted.'),
+      muted(SPIN_DERIVATION)),
 
     section('How to use this page', false,
       p('Read it once at the start of the week. Skim a day\'s “why” the morning she trains that day. Do not study it in the green room — that is what the Cue Card is for.'),
