@@ -8,6 +8,7 @@ import * as store from './store.js';
 import { cheatSheetScreen } from './cheatsheet.js';
 import { methodScreen } from './method.js';
 import { glossaryScreen } from './glossary.js';
+import { playScreen } from './play.js';
 import { runBlock } from './drills/common.js';
 import { solveOrSpin, vowelDrill, vowelNameDrill } from './drills/decision.js';
 import { bonusCategory, bonusLetters, bonusSim } from './drills/bonus.js';
@@ -103,6 +104,10 @@ function homeScreen() {
     btn(`TODAY'S LESSON`, {
       variant: 'primary tall', sub: `Day ${dayNumber} — ${day.minutes} min`,
       onclick: () => { primeAudio(); go('#/days'); },
+    }),
+    btn('JUST PLAY A ROUND', {
+      variant: 'ghost', sub: 'spin the wheel, no scoring',
+      onclick: () => { primeAudio(); go('#/play'); },
     })
   );
 }
@@ -215,6 +220,7 @@ async function boot() {
   route('cheat', cheatSheetScreen);
   route('method', methodScreen);
   route('glossary', glossaryScreen);
+  route('play', playScreen);
   route('settings', settingsScreen);
   route('days', () => import('./lessons.js').then((m) => m.lessonTreeScreen()));
   route('day/:n', ({ n }) => runDay(Number(n)));

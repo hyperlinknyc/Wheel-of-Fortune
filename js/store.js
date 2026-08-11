@@ -54,6 +54,7 @@ function blank() {
     recent: [],
     settings: { mic: false },
     progress: {},
+    play: { rounds: 0, wins: 0, banked: 0, best: 0 },
   };
 }
 
@@ -199,6 +200,31 @@ export function clearRoundProgress(key) {
 export function clearDayRoundProgress(dayNumber, blockCount) {
   for (let i = 0; i < blockCount; i++) clearRoundProgress(dayBlockKey(dayNumber, i));
 }
+
+// ---------------------------------------------------------------------------
+// Play mode
+//
+// Kept entirely out of `results`. Play rounds must not touch the training
+// stats or the adaptive engine: if messing about for fun could move Category
+// Discipline, the number she is trying to drive to 100% would stop meaning
+// anything, and the plan would start reweighting itself off play data.
+// ---------------------------------------------------------------------------
+
+export function recordPlayRound({ won, amount = 0 }) {
+  const p = (state.play ??= { rounds: 0, wins: 0, banked: 0, best: 0 });
+  p.rounds++;
+  if (won) {
+    p.wins++;
+    p.banked += amount;
+    p.best = Math.max(p.best, amount);
+  }
+  // Play still counts as showing up today -- it keeps the streak honest
+  // without feeding the accuracy stats.
+  touchStreak();
+  flush();
+}
+
+export const playStats = () => ({ ...(state.play ?? { rounds: 0, wins: 0, banked: 0, best: 0 }) });
 
 export const isDayComplete = (n) => !!state.lessons[n]?.done;
 export const isBlockComplete = (n, blockIndex) => !!state.lessons[n]?.blocks?.[blockIndex];

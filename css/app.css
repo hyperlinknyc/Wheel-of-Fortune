@@ -378,3 +378,42 @@ p  { margin: 0 0 10px; }
 @media (prefers-reduced-motion: reduce) {
   * { animation-duration: .01ms !important; transition-duration: .01ms !important; }
 }
+
+/* ---------- play mode: the wheel ---------- */
+.wheel-wrap { position: relative; display: flex; justify-content: center; margin: 4px 0 10px; }
+.wheel-wrap.small { transform: scale(.62); transform-origin: top center; margin-bottom: -70px; }
+.wheel-box { width: min(300px, 78vw); max-width: 300px; }
+.wheel-svg { width: 100%; height: auto; display: block; }
+.wheel-rotor { transform-origin: 150px 150px; }
+.wedge { stroke: var(--bg); stroke-width: 1.5; }
+.wedge.cash { fill: var(--surface-2); }
+.wedge.bankrupt { fill: #050B18; }
+.wedge.lose { fill: #6B7893; }
+.wedge-label {
+  font-family: var(--mono); font-size: 13px; font-weight: 800;
+  fill: var(--text); text-anchor: middle; dominant-baseline: middle;
+}
+.wedge-label.bankrupt { fill: var(--bad); font-size: 11px; }
+.wedge-label.lose { fill: var(--on-accent); font-size: 11px; }
+.wheel-hub { fill: var(--accent); stroke: var(--bg); stroke-width: 3; }
+/* Pointer sits at 12 o'clock, overlapping the rim. */
+.wheel-pointer {
+  position: absolute; top: -2px; left: 50%; transform: translateX(-50%);
+  width: 0; height: 0; z-index: 2;
+  border-left: 13px solid transparent;
+  border-right: 13px solid transparent;
+  border-top: 26px solid var(--accent);
+  filter: drop-shadow(0 2px 3px rgba(0,0,0,.6));
+}
+
+/* Letter grid for play mode: 5 per row, orphan row centers itself. */
+.play-keys { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; margin: 4px 0 8px; }
+.play-keys .key { flex: 0 0 calc(20% - 5px); min-height: 60px; }
+.play-keys .key.used { opacity: .3; }
+.called-strip { font-family: var(--mono); letter-spacing: .14em; margin: 8px 0 0; }
+/* Slim line, not a card: the full card cost 98px and pushed the last letter
+   row off the bottom of the picker screen. */
+.landed-line { font-size: 19px; font-weight: 700; margin: 0 0 8px; line-height: 1.3; }
+.landed-line b { font-size: 27px; color: var(--accent); }
+.flash.good { border-color: var(--good); }
+.flash.bad { border-color: var(--bad); }

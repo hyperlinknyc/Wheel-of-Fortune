@@ -13,6 +13,29 @@ export const COPIES_DIVISOR = 3000;
 export const ALWAYS_SOLVE_ABOVE = 9000;
 export const VOWEL_COST = 250;
 
+/**
+ * The wheel used by Play mode.
+ *
+ * It lives here, next to the constants derived from it, because the drills
+ * teach "2 Bankrupt + 1 Lose-a-Turn out of 24" and "a $700 average wedge" --
+ * if the wheel she actually spins disagreed with that, the app would be
+ * teaching one game and letting her play a different one. tools/validate.mjs
+ * asserts the composition still matches WEDGE_AVERAGE and TURN_ENDING_ODDS.
+ *
+ * Order is interleaved the way a real wheel is: big money spread out, the
+ * two Bankrupts nowhere near each other.
+ */
+export const BANKRUPT = 'BANKRUPT';
+export const LOSE_A_TURN = 'LOSE A TURN';
+
+export const WHEEL = [
+  500, 900, 700, BANKRUPT, 600, 800, 500, 650,
+  500, LOSE_A_TURN, 700, 600, 550, 500, 600, 550,
+  BANKRUPT, 650, 500, 700, 800, 650, 2500, 350,
+];
+
+export const wheelCashWedges = () => WHEEL.filter((w) => typeof w === 'number');
+
 // ---------------------------------------------------------------------------
 // The five strong-solver mistakes. Every logged error carries one of these.
 // ---------------------------------------------------------------------------

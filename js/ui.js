@@ -150,7 +150,10 @@ export function sizeBoard(board) {
   const widthMax = Math.max(21, Math.min(46, Math.floor((avail - (longest - 1) * gap - 2) / longest)));
 
   const screenH = screenEl().clientHeight || 600;
-  const heightBudget = Math.max(140, screenH * 0.42);
+  // A board marked .compact is context beside something else (a letter grid,
+  // a picker) rather than the main event, so it gets a smaller slice.
+  const share = wrap?.classList.contains('compact') ? 0.22 : 0.42;
+  const heightBudget = Math.max(110, screenH * share);
   const rowGap = 6;
 
   let tile = widthMax;
@@ -509,6 +512,7 @@ function syncNav(raw) {
     home: 'home', settings: 'home', days: 'home', day: 'home', method: 'home',
     practice: 'practice', drill: 'practice',
     cheat: 'cheat', glossary: 'cheat',
+    play: 'practice',
   })[section] || 'home';
   for (const b of document.querySelectorAll('.util[data-nav]')) {
     b.classList.toggle('accent', b.dataset.nav === active);

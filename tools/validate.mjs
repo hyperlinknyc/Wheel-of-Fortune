@@ -8,7 +8,10 @@
 import { readFileSync, existsSync, readdirSync, statSync } from 'node:fs';
 import { resolve, dirname, join, relative } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { BONUS_RANKING, BONUS_LETTER_SETS, FREE_LETTERS } from '../js/strategy.js';
+import {
+  BONUS_RANKING, BONUS_LETTER_SETS, FREE_LETTERS,
+  WHEEL, BANKRUPT, LOSE_A_TURN, wheelCashWedges, WEDGE_AVERAGE,
+} from '../js/strategy.js';
 import { DAYS } from '../js/lessons.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -141,6 +144,35 @@ const properPct = (100 * properCount) / bank.length;
 if (properPct < 50 || properPct > 62)
   warn(`proper-name share is ${properPct.toFixed(1)}%, target is ~55%`);
 if (bonusCount < 60) fail(`only ${bonusCount} bonus-eligible puzzles, need at least 60`);
+
+// --- Play-mode wheel --------------------------------------------------------
+// The drills teach "2 Bankrupt + 1 Lose-a-Turn out of 24" and a $700 average
+// wedge. If the wheel she actually spins in Play mode drifted from that, the
+// app would teach one game and let her play a different one.
+{
+  const bankrupts = WHEEL.filter((w) => w === BANKRUPT).length;
+  const loseTurns = WHEEL.filter((w) => w === LOSE_A_TURN).length;
+  const cash = wheelCashWedges();
+
+  if (WHEEL.length !== 24) fail(`wheel has ${WHEEL.length} wedges, expected 24`);
+  if (bankrupts !== 2) fail(`wheel has ${bankrupts} Bankrupt wedges, expected 2`);
+  if (loseTurns !== 1) fail(`wheel has ${loseTurns} Lose-a-Turn wedges, expected 1`);
+  if (cash.length !== 21) fail(`wheel has ${cash.length} cash wedges, expected 21`);
+
+  const avg = cash.reduce((a, b) => a + b, 0) / cash.length;
+  if (Math.abs(avg - WEDGE_AVERAGE) > WEDGE_AVERAGE * 0.05) {
+    fail(`wheel average wedge is $${avg.toFixed(0)}, but the drills teach $${WEDGE_AVERAGE}`);
+  }
+  for (const w of cash) {
+    if (!Number.isInteger(w) || w <= 0) fail(`wheel has an invalid cash wedge: ${w}`);
+  }
+  // Two Bankrupts side by side would make a whole arc of the wheel dead.
+  for (let i = 0; i < WHEEL.length; i++) {
+    if (WHEEL[i] === BANKRUPT && WHEEL[(i + 1) % WHEEL.length] === BANKRUPT) {
+      fail('the two Bankrupt wedges are adjacent on the wheel');
+    }
+  }
+}
 
 // --- Name tables ------------------------------------------------------------
 // Same principle as the boards: a name filed under the wrong length would show
