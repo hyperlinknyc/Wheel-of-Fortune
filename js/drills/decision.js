@@ -1,7 +1,7 @@
 // Drill 1: SOLVE OR SPIN     Drill 2: VOWEL OR NO VOWEL
 // The two drills that attack "she keeps spinning when she should solve".
 
-import { h, btn, setScreen, setActions, renderBoard, verdictCard, ding, buzzer } from '../ui.js';
+import { h, btn, setScreen, setActions, renderBoard, verdictCard, selfScore, ding, buzzer } from '../ui.js';
 import { pick } from '../data.js';
 import { logResult } from '../store.js';
 import {
@@ -156,27 +156,69 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
       const t0 = performance.now();
 
       const ask = () => {
+        // Slim lines, not a card. The full card ran ~200px and, stacked under
+        // a board and over three rows of buttons, left the pot itself as a
+        // sliver at the bottom of an iPhone SE -- the one number the decision
+        // is actually about. The break-even math is not lost: the feedback
+        // card spells it out on every round.
+        setScreen(
+          h('div', { class: 'cat tight' }, puzzle.category),
+          renderBoard(puzzle.answer, revealed),
+          // No cue on the ask screen. On the name variant it read "Name? Vowel
+          // before the second consonant" directly above the buttons -- which is
+          // the answer to the question being asked. The reflex is taught on the
+          // block's tip card and repeated in every feedback card; here it was
+          // giving the round away, and costing the fold to do it.
+          h('p', { class: 'center landed-line' }, 'Pot ', h('b', {}, money(pot)))
+        );
+        // Two rows, not five across: five buttons on a 320px iPhone SE would be
+        // 50px wide, under the 60px floor for fast one-handed tapping.
+        //
+        // Heights are deliberately not `tall` here. Three rows of 92px ate the
+        // whole screen on an SE and pushed the pot -- the number the decision
+        // is actually about -- off the top. At 76 and 60 every target still
+        // clears the floor with room to spare.
+        const vowelBtn = (v) =>
+          btn(v, { onclick: () => askReason(v, performance.now() - t0) });
+        setActions(
+          h('div', { class: 'row' }, ...['A', 'E', 'I'].map(vowelBtn)),
+          h('div', { class: 'row' }, ...['O', 'U'].map(vowelBtn)),
+          // Paired on one row so the third option costs no extra height.
+          // NO VOWEL means "I don't have it and I'm still not buying";
+          // I KNOW IT is the separate, and better, answer.
+          h('div', { class: 'row' },
+            btn('NO VOWEL', {
+              variant: 'ghost small',
+              onclick: () => score({ choice: 'NONE', latencyMs: performance.now() - t0 }),
+            }),
+            btn('I KNOW IT', {
+              variant: 'good small',
+              onclick: () => claimKnown(performance.now() - t0),
+            }))
+        );
+      };
+
+      /** Honest mode: saying you had it is a claim you then check. */
+      const claimKnown = (latencyMs) => {
         setScreen(
           h('div', { class: 'cat' }, puzzle.category),
           renderBoard(puzzle.answer, revealed),
           h('div', { class: 'card center' },
-            h('h3', {}, 'Pot'),
-            h('div', { class: 'big-num' }, money(pot)),
-            h('p', { class: 'cue', style: { marginTop: '10px', fontSize: '20px' } },
-              nameWeighted ? REFLEXES.nameVowel.cue : REFLEXES.vowelReason.cue),
-            h('details', { class: 'math-disclosure' },
-              h('summary', {}, 'Show the math'),
-              h('p', { class: 'muted' }, vowelBreakEvenText(pot))))
+            h('p', { class: 'cue', style: { fontSize: '22px' } }, 'Say it out loud.'),
+            h('p', { class: 'why' }, 'Then check it. No marks for nearly.'))
         );
-        // Two rows, not five across: five buttons on a 320px iPhone SE would be
-        // 50px wide, under the 60px floor for fast one-handed tapping.
-        const vowelBtn = (v) =>
-          btn(v, { variant: 'tall', onclick: () => askReason(v, performance.now() - t0) });
-        setActions(
-          h('div', { class: 'row' }, ...['A', 'E', 'I'].map(vowelBtn)),
-          h('div', { class: 'row' }, ...['O', 'U'].map(vowelBtn)),
-          btn('NO VOWEL', { variant: 'ghost', onclick: () => score({ choice: 'NONE', latencyMs: performance.now() - t0 }) })
-        );
+        setActions(btn('SHOW ME THE ANSWER', {
+          variant: 'primary tall',
+          onclick: () => {
+            setScreen(
+              h('div', { class: 'cat' }, puzzle.category),
+              renderBoard(puzzle.answer, 'ALL'),
+              h('div', { class: 'card center' }, h('h2', {}, puzzle.answer))
+            );
+            setActions(...selfScore('Did you have it, word for word?',
+              (hadIt) => score({ choice: 'KNOW', hadIt, latencyMs })));
+          },
+        }));
       };
 
       const askReason = (vowel, latencyMs) => {
@@ -196,9 +238,9 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
         setActions();
       };
 
-      const score = ({ choice, vowel, reasonId, latencyMs }) => {
+      const score = ({ choice, vowel, reasonId, hadIt, latencyMs }) => {
         const r = scoreVowel({
-          isProperName: puzzle.isProperName, choice, vowel, reasonId, revealed: [...revealed],
+          isProperName: puzzle.isProperName, choice, vowel, reasonId, hadIt, revealed: [...revealed],
         });
         r.correct ? ding() : buzzer();
 
@@ -210,7 +252,7 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
           category: puzzle.category,
           isProperName: puzzle.isProperName,
           puzzleId: puzzle.id,
-          meta: { pot, choice, vowel, reasonId, errorTag: r.errorTag },
+          meta: { pot, choice, vowel, reasonId, hadIt, errorTag: r.errorTag },
         });
 
         const best = preferredVowel([...revealed]);
@@ -221,13 +263,20 @@ export function makeVowelDrill({ nameWeighted = false } = {}) {
             headline: r.headline,
             cue: r.correct ? null : (r.errorTag ? MISTAKES[r.errorTag].cue : reflex.cue),
             why: r.correct ? r.detail : (r.errorTag ? MISTAKES[r.errorTag].why : reflex.why),
-            lines: [
+            // A correct I KNOW IT never needed the vowel, so the break-even
+            // arithmetic is beside the point. A wrong one is exactly when the
+            // name-vowel order is worth putting in front of her.
+            lines: choice === 'KNOW' && r.correct ? [] : [
               { label: 'Break-even', value: vowelBreakEvenText(pot) },
               ...(puzzle.isProperName ? [{ label: 'Name vowel here', value: best, emphasis: true }] : []),
             ],
             tag: r.errorTag ? MISTAKES[r.errorTag] : null,
           }),
-          h('div', { class: 'card' }, h('h3', {}, 'The answer was'), renderBoard(puzzle.answer, 'ALL'))
+          // On the I KNOW IT path she has just been shown the full board to
+          // score herself against, so repeating it here is noise.
+          choice === 'KNOW'
+            ? null
+            : h('div', { class: 'card' }, h('h3', {}, 'The answer was'), renderBoard(puzzle.answer, 'ALL'))
         );
         setActions(btn('NEXT', { variant: 'primary tall', onclick: () => next({ correct: r.correct, meta: { errorTag: r.errorTag } }) }));
       };

@@ -325,7 +325,36 @@ export const VOWEL_REASONS = [
   { id: 'shape', text: 'I can already see where the vowels go', good: false, errorTag: 3 },
 ];
 
-export function scoreVowel({ isProperName, choice, vowel, reasonId, revealed }) {
+export function scoreVowel({ isProperName, choice, vowel, reasonId, revealed, hadIt }) {
+  // "I know it" is the one answer that beats every vowel decision, including on
+  // a name. Without it the drill was a trap: buying with the reason "I already
+  // know the answer" is milking (mistake 1), and passing on the vowel was
+  // scored as mistake 5, so a puzzle she had already solved had no right
+  // answer at all. Claiming it is not free -- she says it out loud and scores
+  // herself, exactly like every other solve in the app.
+  if (choice === 'KNOW') {
+    if (hadIt) {
+      return {
+        correct: true,
+        errorTag: null,
+        headline: 'Right. Solving beats buying.',
+        detail: isProperName
+          ? 'Name category — solve on recognition. A vowel you did not need is $250 ' +
+            'and one more chance to hand the puzzle over.'
+          : 'If you know it, solve. A vowel can only sell you information you already had.',
+      };
+    }
+    return {
+      correct: false,
+      errorTag: isProperName ? 5 : 2,
+      headline: 'You did not have it.',
+      detail: isProperName
+        ? 'This is exactly why names get the vowel first. Recognising who it is ' +
+          'is not the same as knowing how it is spelled.'
+        : 'Read the board again before you commit. The certainty is the expensive part.',
+    };
+  }
+
   if (choice === 'NONE') {
     if (isProperName) {
       return {
@@ -334,7 +363,8 @@ export function scoreVowel({ isProperName, choice, vowel, reasonId, revealed }) 
         headline: 'On a name, no vowel is the wrong answer.',
         detail:
           'Buy the vowel before your second consonant. Order: A → O → E → I. ' +
-          'Knowing it is a person does not tell you how it is spelled.',
+          'Knowing it is a person does not tell you how it is spelled. ' +
+          'If you already had the answer, that is the I KNOW IT button — and it wins.',
       };
     }
     return {

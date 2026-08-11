@@ -11,7 +11,7 @@ import { fileURLToPath } from 'node:url';
 import {
   BONUS_RANKING, BONUS_LETTER_SETS, FREE_LETTERS,
   WHEEL, BANKRUPT, LOSE_A_TURN, wheelCashWedges, WEDGE_AVERAGE,
-  REFLEXES, revealedFraction,
+  REFLEXES, revealedFraction, scoreVowel, VOWEL_REASONS,
 } from '../js/strategy.js';
 import { DAYS } from '../js/lessons.js';
 import { TIPS, EVENTS as TIP_EVENTS, resolveTip } from '../js/tips.js';
@@ -278,6 +278,37 @@ if (bonusCount < 60) fail(`only ${bonusCount} bonus-eligible puzzles, need at le
   };
   if (rateOf(OPPONENTS[1]) <= rateOf(OPPONENTS[0]))
     fail('the early solver does not actually beat the grinder — the game teaches the wrong lesson');
+}
+
+// --- Vowel drill: every board must have a right answer ----------------------
+// This shipped broken. On a proper name, buying with the reason "I already know
+// the answer" scored as milking (mistake 1) and passing on the vowel scored as
+// mistake 5, so a puzzle she had already solved had no correct answer at all --
+// the drill marked her wrong for being right. A drill that cannot be answered
+// correctly teaches her to distrust the feedback, so it is now a build failure.
+{
+  for (const isProperName of [false, true]) {
+    const outcomes = [
+      scoreVowel({ isProperName, choice: 'KNOW', hadIt: true }),
+      scoreVowel({ isProperName, choice: 'NONE', revealed: [] }),
+      ...VOWEL_REASONS.map((rs) =>
+        scoreVowel({ isProperName, choice: 'BUY', vowel: 'A', reasonId: rs.id, revealed: [] })),
+    ];
+    if (!outcomes.some((o) => o.correct))
+      fail(`vowel drill has no correct answer available when isProperName=${isProperName}`);
+    for (const o of outcomes) {
+      if (!o.headline) fail(`vowel drill: an outcome has no headline (isProperName=${isProperName})`);
+      if (!o.correct && !o.errorTag) fail(`vowel drill: a wrong outcome carries no mistake tag`);
+    }
+  }
+
+  // The specific trap, pinned.
+  if (!scoreVowel({ isProperName: true, choice: 'KNOW', hadIt: true }).correct)
+    fail('vowel drill: knowing the answer on a name must not score as wrong');
+  if (scoreVowel({ isProperName: true, choice: 'KNOW', hadIt: false }).correct)
+    fail('vowel drill: an unverified claim to know it must not score as correct');
+  if (scoreVowel({ isProperName: true, choice: 'BUY', vowel: 'A', reasonId: 'known', revealed: [] }).correct)
+    fail('vowel drill: buying a vowel on a puzzle you have already solved is milking');
 }
 
 // --- revealedFraction -------------------------------------------------------
