@@ -2,6 +2,7 @@
 
 import { h, btn, setScreen, setActions, setTop, tipCard, primeAudio, cancelPending } from '../ui.js';
 import { markBlockComplete } from '../store.js';
+import { RSTLNE_MAIN_COVERAGE } from '../strategy.js';
 
 const CONSONANTS = 'BCDFGHJKLMNPQRSTVWXYZ'.split('');
 const VOWELS = 'AEIOU'.split('');
@@ -98,21 +99,64 @@ export const pickN = (arr, n) => {
   return out;
 };
 
+const shuffle = (arr) => pickN(arr, arr.length);
+
 /**
- * A believable mid-puzzle board: some consonants called, optionally a vowel.
- * Never reveals so much that the board reads itself.
+ * A believable mid-puzzle board: enough of the tiles lit to make "you know
+ * the answer" plausible, a few blanks left so it doesn't read as finished.
+ *
+ * Targets a fraction of actual board *tiles* lit, not a count of distinct
+ * letters -- picking 3 rare letters like J, Q, X lights almost nothing,
+ * while 3 common ones can light a third of the board. Real feedback was
+ * that the app "expects you to know the answer with just a few consonants
+ * on the board," which was exactly this: a flat 2-3 letter *types*, so a
+ * long answer with mostly-rare called letters could sit under 20% lit.
+ * Anchored to RSTLNE_MAIN_COVERAGE (the app's own stated baseline for what
+ * a main-game board typically shows by mid-round) plus a bit more, since a
+ * believable "I know it" moment is usually past RSTLNE plus a couple of
+ * personally-called letters -- selection is frequency-weighted, favoring
+ * common letters first, the way RSTLNE-style reveals actually accumulate.
  */
-export function midPuzzleState(puzzle, { vowels = false, minHidden = 3 } = {}) {
-  const letters = [...new Set(puzzle.answer.replace(/[^A-Z]/g, ''))];
-  const inAnswer = (c) => letters.includes(c);
+export function midPuzzleState(puzzle, { vowels = false, minHidden = 2 } = {}) {
+  const allLetters = puzzle.answer.replace(/[^A-Z]/g, '');
+  const totalTiles = allLetters.length;
+  const uniqueLetters = [...new Set(allLetters)];
+  const wordCount = puzzle.answer.split(' ').length;
 
-  const calledHits = pickN(CONSONANTS.filter(inAnswer), 2 + Math.floor(Math.random() * 2));
-  const misses = pickN(CONSONANTS.filter((c) => !inAnswer(c)), 1);
-  const revealed = new Set([...calledHits, ...(vowels ? pickN(VOWELS.filter(inAnswer), 1) : [])]);
+  const freq = (c) => [...allLetters].filter((x) => x === c).length;
+  const uniqueConsonants = shuffle(CONSONANTS.filter((c) => uniqueLetters.includes(c)))
+    .sort((a, b) => freq(b) - freq(a)); // common letters first, ties randomized
+  const uniqueVowels = shuffle(VOWELS.filter((c) => uniqueLetters.includes(c)))
+    .sort((a, b) => freq(b) - freq(a));
 
-  // Back off until enough of the board is still blank to be worth solving.
-  while (letters.filter((l) => !revealed.has(l)).length < minHidden && revealed.size) {
-    revealed.delete([...revealed][revealed.size - 1]);
+  const targetFraction = wordCount >= 5 ? RSTLNE_MAIN_COVERAGE + 0.22
+    : wordCount >= 3 ? RSTLNE_MAIN_COVERAGE + 0.16
+      : RSTLNE_MAIN_COVERAGE + 0.10;
+  const targetTiles = Math.round(totalTiles * Math.min(0.85, targetFraction));
+
+  const revealed = new Set();
+  let lit = 0;
+  const litCount = (c) => (revealed.has(c) ? 0 : freq(c));
+
+  if (vowels) {
+    const vowelTarget = Math.max(1, Math.ceil(uniqueVowels.length / 2));
+    for (const v of uniqueVowels.slice(0, vowelTarget)) { revealed.add(v); lit += litCount(v); }
+  }
+  for (const c of uniqueConsonants) {
+    if (lit >= targetTiles) break;
+    lit += freq(c);
+    revealed.add(c);
+  }
+
+  const misses = pickN(CONSONANTS.filter((c) => !uniqueLetters.includes(c)), 1);
+
+  // Back off until a couple of letters are still hidden, so it never reads
+  // as a fully-solved board -- a floor for short/common-letter-heavy
+  // answers, not the thing driving how generous the reveal is.
+  const order = [...revealed].sort((a, b) => freq(a) - freq(b)); // drop rarest first
+  let i = 0;
+  while (uniqueLetters.filter((l) => !revealed.has(l)).length < minHidden && i < order.length) {
+    revealed.delete(order[i++]);
   }
   return { revealed, called: [...revealed, ...misses] };
 }

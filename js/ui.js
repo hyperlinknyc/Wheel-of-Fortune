@@ -111,14 +111,57 @@ function boardLabel(answer, set, showAll) {
   return `Puzzle board: ${shown}`;
 }
 
-/** Tiles are sized so the longest word fits, with a hard 24px font floor. */
+/**
+ * Simulates the board's flex-wrap line breaks at a given tile size, without
+ * touching the DOM, so sizeBoard() can pick a size before ever painting it.
+ * Mirrors the CSS: words pack left-to-right, wrapping to a new row when the
+ * next word would not fit in the remaining row width.
+ */
+function estimateRows(wordLengths, tile, gap, avail) {
+  const wordW = (len) => len * tile + (len - 1) * gap;
+  let rows = 1;
+  let used = 0;
+  for (const len of wordLengths) {
+    const ww = wordW(len);
+    const needed = used === 0 ? ww : used + gap * 2 + ww; // inter-word gap
+    if (needed > avail && used !== 0) { rows++; used = ww; }
+    else used = needed;
+  }
+  return rows;
+}
+
+/**
+ * Tiles are sized so the longest word fits width-wise, with a hard 26px
+ * font floor -- but width alone isn't enough. A puzzle with many short
+ * words (e.g. "LET THE CAT OUT OF THE BAG", 7 rows) fits easily row-by-row
+ * yet stacks into a board taller than the screen, burying the pot amount
+ * and the SOLVE/SPIN buttons below an unscrolled fold. So this also caps
+ * total board height to a share of the visible screen, shrinking the tile
+ * further (down to the same 21px floor) when a puzzle has many rows.
+ */
 export function sizeBoard(board) {
   const wrap = board.parentElement;
   const avail = Math.min((wrap?.clientWidth || screenEl().clientWidth || 340), 560);
   const longest = Number(board.dataset.longest || 8);
+  const words = (board.textContent || '').trim()
+    ? [...board.querySelectorAll('.word')].map((w) => w.querySelectorAll('.tile').length)
+    : [longest];
   const gap = longest >= 11 ? 2 : 4;
-  const raw = Math.floor((avail - (longest - 1) * gap - 2) / longest);
-  const tile = Math.max(21, Math.min(46, raw));
+  const widthMax = Math.max(21, Math.min(46, Math.floor((avail - (longest - 1) * gap - 2) / longest)));
+
+  const screenH = screenEl().clientHeight || 600;
+  const heightBudget = Math.max(140, screenH * 0.42);
+  const rowGap = 6;
+
+  let tile = widthMax;
+  if (words.length > 1) {
+    for (; tile > 21; tile--) {
+      const rows = estimateRows(words, tile, gap, avail);
+      const boardH = rows * (tile * 1.34) + (rows - 1) * rowGap;
+      if (boardH <= heightBudget) break;
+    }
+  }
+
   board.style.setProperty('--tile', tile + 'px');
   board.style.setProperty('--tile-font', Math.max(26, Math.round(tile * 1.04)) + 'px');
   board.style.gap = `6px ${Math.max(6, gap * 2)}px`;
