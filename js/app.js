@@ -41,30 +41,31 @@ function homeScreen() {
   const day = DAYS[dayNumber - 1];
   const planCard = store.takePlanCard();
 
-  const countdown = h('div', { class: 'card center', style: { borderColor: 'var(--accent)' } },
+  // The whole countdown card is the tap target for changing the tape date --
+  // a full-width button inside it pushed the stat rings below the fold.
+  const countdown = h('button', {
+    class: 'card center countdown', type: 'button',
+    onclick: () => go('#/settings'),
+  },
     h('h3', {}, days === 0 ? 'Taping is today' : days < 0 ? 'Taping has passed' : 'Days until taping'),
-    h('div', { class: 'big-num', style: { color: 'var(--accent)', fontSize: '68px' } },
-      days < 0 ? '—' : String(days)),
-    h('p', { class: 'muted', style: { marginTop: '6px' } },
+    h('div', { class: 'big-num countdown-num' }, days < 0 ? '—' : String(days)),
+    h('p', { class: 'muted' },
       streak ? `${streak}-day streak · ${s.today} drills today` : `${s.today} drills today`),
-    h('button', {
-      class: 'btn small ghost', style: { marginTop: '12px' }, type: 'button',
-      onclick: () => go('#/settings'),
-    }, 'Change tape date')
+    h('p', { class: 'muted tiny' }, 'Tap to change the tape date')
   );
 
   setScreen(
     countdown,
 
-    planCard ? h('div', { class: 'card', style: { borderColor: 'var(--accent)' } },
-      h('h3', {}, planCard.title),
-      h('p', {}, planCard.because),
-      h('p', { class: 'muted' }, planCard.change)) : null,
-
     h('div', { class: 'rings' },
       ring('Category discipline', s.categoryDiscipline),
       ring('Solve timing', s.solveTiming),
       ring('Name recall', s.nameRecall)),
+
+    planCard ? h('div', { class: 'card', style: { borderColor: 'var(--accent)' } },
+      h('h3', {}, planCard.title),
+      h('p', {}, planCard.because),
+      h('p', { class: 'muted' }, planCard.change)) : null,
 
     s.tossUpN >= 4 ? card(
       h('h3', {}, 'Toss-ups'),
