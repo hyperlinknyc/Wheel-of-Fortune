@@ -208,14 +208,14 @@ export function solveOrSpinMath({ pot, copies, isProperName }) {
     lines.push({
       label: 'Pot is over ' + money(ALWAYS_SOLVE_ABOVE),
       value: 'Always solve. No exceptions.',
-      emphasis: true,
+      wide: true,
     });
   }
   if (rule.nameForcesSolve) {
     lines.push({
       label: 'Proper-name category',
       value: 'Solve on recognition. Never milk a name.',
-      emphasis: true,
+      wide: true,
     });
   }
 

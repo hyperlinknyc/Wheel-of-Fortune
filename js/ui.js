@@ -383,9 +383,17 @@ export function verdictCard({ good, headline, cue = null, why = null, lines = []
 
 export function mathBlock(lines) {
   return h('div', {}, ...lines.map((l) =>
-    h('div', { class: `mathline${l.emphasis ? ' em' : ''}` },
-      h('span', { class: 'l' }, l.label),
-      h('span', { class: `v${l.emphasis ? (l.good ? ' good' : ' bad') : ''}` }, l.value))));
+    // A "wide" line is a full sentence (a stated rule), not a label:value
+    // pair -- squeezing it into a right-aligned value cell next to a label
+    // is what was running text off the screen edge. Stack it instead.
+    l.wide
+      ? h('div', { class: 'mathline wide' },
+          l.label ? h('span', { class: 'l' }, l.label) : null,
+          h('span', { class: `v${l.good === false ? ' bad' : ''}` }, l.value))
+      : h('div', { class: `mathline${l.emphasis ? ' em' : ''}` },
+          h('span', { class: 'l' }, l.label),
+          h('span', { class: `v${l.emphasis ? (l.good ? ' good' : ' bad') : ''}` }, l.value))
+  ));
 }
 
 /** Math stays available; it is never the first thing she has to read. */

@@ -185,9 +185,26 @@ p  { margin: 0 0 10px; }
   font-size: 19px;
 }
 .mathline:last-child { border-bottom: 0; }
-.mathline .l { color: var(--muted); flex: 1 1 auto; }
-.mathline .v { font-family: var(--mono); font-weight: 700; text-align: right; white-space: nowrap; }
+.mathline .l { color: var(--muted); flex: 1 1 auto; min-width: 0; }
+.mathline .v {
+  font-family: var(--mono); font-weight: 700; text-align: right;
+  flex: 0 1 auto; min-width: 0; overflow-wrap: break-word;
+}
 .mathline.em { font-size: 21px; }
+.mathline.em .v.good { color: var(--good); }
+.mathline.em .v.bad  { color: var(--bad); }
+/* A stated rule, not a label:value pair -- stacks full-width so a sentence
+   never gets squeezed into a right-aligned column. */
+.mathline.wide { display: block; }
+.mathline.wide .l {
+  display: block; font-size: 15px; font-weight: 800; letter-spacing: .04em;
+  text-transform: uppercase; margin-bottom: 4px;
+}
+.mathline.wide .v {
+  display: block; font-family: var(--font); font-weight: 700;
+  text-align: left; font-size: 19px; color: var(--text);
+}
+.mathline.wide .v.bad { color: var(--bad); }
 .mathline.em .l { color: var(--text); font-weight: 700; }
 .mathline.em .v.good { color: var(--good); }
 .mathline.em .v.bad  { color: var(--bad); }
