@@ -173,26 +173,36 @@ export function lessonTreeScreen() {
       `${store.daysUntilTaping()} days until taping. Each day installs one reflex.`),
     ...DAYS.map((d) => {
       const done = store.isDayComplete(d.n);
-      const locked = d.n > unlocked;
-      const cls = done ? 'day done' : d.n === unlocked ? 'day current' : locked ? 'day locked' : 'day';
+      const ahead = d.n > unlocked;
+      const cls = done ? 'day done' : d.n === unlocked ? 'day current' : ahead ? 'day locked' : 'day';
       const doneBlocks = d.blocks.filter((b, idx) => store.isBlockComplete(d.n, idx)).length;
       return h('button', {
         class: cls, type: 'button',
         onclick: () => {
-          if (locked) return;
           primeAudio();
+          // Days ahead of the plan are dimmed, not barred. The order is a
+          // recommendation, not a cage -- she is an adult with a real
+          // deadline, and if she wants Day 5's name work tonight she should
+          // get it. One extra tap keeps the default path obvious.
+          if (ahead) return confirmJump(d);
           go('#/day/' + d.n);
         },
       },
         h('div', { class: 'n' }, String(d.n)),
         h('div', { class: 't' },
           h('b', {}, d.theme),
-          h('span', {}, locked ? `Finish day ${d.n - 1} first`
+          h('span', {}, ahead ? `Ahead of the plan · tap to open anyway`
             : done ? `Done · ${d.minutes} min`
               : `${d.blocks.length} blocks · ${d.minutes} min · ${doneBlocks}/${d.blocks.length}`)));
     }),
-    h('p', { class: 'muted', style: { marginTop: '8px' } },
-      'Practice Anything is in the bar at the bottom. Not locked.')
+    card(
+      h('h3', {}, 'Want to pick your own?'),
+      h('p', { class: 'muted' },
+        'Any day above opens, in or out of order. Single drills live in ' +
+        'Practice at the bottom — all of them, always unlocked.'),
+      btn('PRACTICE ANY DRILL', {
+        variant: 'small', onclick: () => go('#/practice'),
+      }))
   );
 
   setActions(
@@ -201,6 +211,35 @@ export function lessonTreeScreen() {
       onclick: () => { primeAudio(); go('#/day/' + unlocked); },
     }),
     btn('WHY THIS PLAN', { variant: 'ghost', onclick: () => go('#/method') })
+  );
+}
+
+/**
+ * Tapping a day she has not unlocked yet: explain, then let her through.
+ *
+ * This renders in place without changing the hash, so going "back" has to
+ * re-render the tree directly -- go('#/days') from here would set the hash
+ * to the value it already has, fire no hashchange, and strand her on this
+ * screen.
+ */
+function confirmJump(d) {
+  setTop({ title: `DAY ${d.n}`, back: () => lessonTreeScreen() });
+  setScreen(
+    card(
+      h('h3', {}, `Day ${d.n} · ahead of the plan`),
+      h('p', { class: 'cue' }, d.reflex.cue),
+      h('p', { class: 'why' }, d.reflex.why),
+      h('p', { class: 'muted' }, d.blurb)),
+    card(
+      h('h3', {}, 'Out of order'),
+      h('p', {}, 'The week builds in order, so earlier days set this one up.'),
+      h('p', { class: 'muted' }, 'That is a recommendation, not a rule. Your call.'))
+  );
+  setActions(
+    btn(`OPEN DAY ${d.n} ANYWAY`, {
+      variant: 'primary tall', onclick: () => { primeAudio(); go('#/day/' + d.n); },
+    }),
+    btn('BACK TO THE PLAN', { variant: 'ghost', onclick: () => lessonTreeScreen() })
   );
 }
 
