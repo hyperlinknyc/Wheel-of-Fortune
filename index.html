@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Wheel Trainer</title>
+<meta name="description" content="A private practice tool for solve timing, proper names, and attention.">
+<meta name="theme-color" content="#0A0C10">
+<meta name="color-scheme" content="dark">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Wheel Trainer">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<link rel="icon" href="icons/icon-192.png">
+<link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+<div id="app">
+  <header id="topbar">
+    <button id="backBtn" class="icon-btn" aria-label="Back" hidden>‹</button>
+    <div id="topTitle">WHEEL TRAINER</div>
+    <div id="topRight"></div>
+  </header>
+
+  <main id="screen" tabindex="-1"></main>
+
+  <div id="actions" aria-live="polite"></div>
+
+  <nav id="utility">
+    <button class="util" data-go="#/home">HOME</button>
+    <button class="util" data-go="#/practice">PRACTICE</button>
+    <button class="util accent" data-go="#/cheat">CHEAT SHEET</button>
+  </nav>
+</div>
+
+<div id="interrupt" class="interrupt" hidden></div>
+
+<noscript><p style="padding:24px;font:18px system-ui;color:#fff">This trainer needs JavaScript.</p></noscript>
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
