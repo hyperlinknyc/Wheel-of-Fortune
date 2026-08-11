@@ -479,42 +479,6 @@ export function selfScore(prompt, onPick) {
   ];
 }
 
-/**
- * Cue-first tip card.
- * Accepts { cue, why, example, math } or legacy { rule, example }.
- */
-export function tipCard({ cue, why, rule, example, math } = {}, onDismiss) {
-  const lead = cue || rule;
-  const node = h('div', { class: 'card tip' },
-    h('h3', {}, 'Today\'s reflex'),
-    lead ? h('p', { class: 'cue' }, lead) : null,
-    why ? h('p', { class: 'why' }, why) : null,
-    example ? h('p', { class: 'muted' }, example) : null,
-    math ? (typeof math === 'string'
-      ? h('details', { class: 'math-disclosure' },
-          h('summary', {}, 'Show the math'),
-          h('p', { class: 'muted' }, math))
-      : mathDisclosure(math)) : null,
-    h('p', { class: 'muted tiny' }, 'Swipe away or tap Got it.')
-  );
-  let x0 = null;
-  node.addEventListener('touchstart', (e) => { x0 = e.touches[0].clientX; }, { passive: true });
-  node.addEventListener('touchmove', (e) => {
-    if (x0 == null) return;
-    const dx = e.touches[0].clientX - x0;
-    node.style.transform = `translateX(${dx}px)`;
-    node.style.opacity = String(Math.max(0, 1 - Math.abs(dx) / 220));
-  }, { passive: true });
-  node.addEventListener('touchend', (e) => {
-    const dx = (e.changedTouches[0].clientX - (x0 ?? 0));
-    node.style.transform = '';
-    node.style.opacity = '';
-    x0 = null;
-    if (Math.abs(dx) > 90) onDismiss();
-  });
-  return node;
-}
-
 // ---------------------------------------------------------------------------
 // Router
 // ---------------------------------------------------------------------------

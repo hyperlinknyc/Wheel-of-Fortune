@@ -4,7 +4,7 @@
 // airplane mode. Cache-first with a background refresh: she never waits on the
 // network, and a new version lands on the next launch.
 
-const VERSION = 'wheel-trainer-v9';
+const VERSION = 'wheel-trainer-v10';
 
 const PRECACHE = [
   './',
@@ -24,6 +24,7 @@ const PRECACHE = [
   './js/game.js',
   './js/wheel.js',
   './js/tips.js',
+  './js/briefs.js',
   './js/voice.js',
   './js/drills/common.js',
   './js/drills/decision.js',

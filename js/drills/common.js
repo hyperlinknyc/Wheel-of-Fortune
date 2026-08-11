@@ -1,6 +1,9 @@
 // Shared drill scaffolding: block runner, pot generation, board states.
 
-import { h, btn, setScreen, setActions, setTop, tipCard, primeAudio, cancelPending } from '../ui.js';
+import {
+  h, btn, setScreen, setActions, setTop, card, primeAudio, cancelPending,
+} from '../ui.js';
+import { briefFor } from '../briefs.js';
 import {
   markBlockComplete, dayBlockKey, practiceKey,
   saveRoundProgress, loadRoundProgress, clearRoundProgress,
@@ -32,15 +35,46 @@ export function runBlock({ drill, rounds = 6, dayNumber = null, blockIndex = nul
   let i = saved ? saved.index : 0;
   const resumed = !!saved;
 
-  const showTip = () => {
+  /**
+   * The briefing. Every block opens by saying what it is for and what she is
+   * about to be asked to do, because a drill whose point you cannot state is
+   * a drill you do on autopilot.
+   *
+   * It costs a returning user nothing: START is pinned in the action bar and
+   * tappable without reading a word, so the explanation is optional by
+   * position rather than by being hidden behind a disclosure.
+   */
+  const showBrief = () => {
     setTop({ title: drill.title, back: () => onDone?.({ aborted: true, results }) });
+    const brief = briefFor(drill.id);
+    const tip = drill.tip ?? {};
+
+    // Order matters more than it looks. The strategy paragraph is the longest
+    // thing here, and putting it second buried "what you'll do" below the fold
+    // on an iPhone SE -- so the one part she has to read to start was the one
+    // part she could not see. Cue, then steps, then the reasoning she can
+    // scroll to.
     setScreen(
-      tipCard(drill.tip, start),
+      card(
+        h('h3', {}, 'The reflex'),
+        (tip.cue || tip.rule) ? h('p', { class: 'cue brief-cue' }, tip.cue ?? tip.rule) : null),
+
+      brief ? card(
+        h('h3', {}, 'What you\'ll do'),
+        h('ol', { class: 'list steps' }, ...brief.doing.map((s) => h('li', {}, s))),
+        h('p', { class: 'muted tiny' }, brief.scored)) : null,
+
+      brief ? card(
+        h('h3', {}, 'Why this drill'),
+        h('p', { class: 'why' }, brief.strategy),
+        tip.example ? h('p', { class: 'muted tiny' }, tip.example) : null)
+        : (tip.why ? card(h('h3', {}, 'Why this drill'), h('p', { class: 'why' }, tip.why)) : null),
+
       resumed
         ? h('p', { class: 'muted center' }, `Picking back up at round ${i + 1} of ${rounds} — ${i} already done.`)
         : h('p', { class: 'muted center' }, `${rounds} rounds. About ${drill.minutes ?? 3} minutes.`)
     );
-    setActions(btn(resumed ? 'CONTINUE — START' : 'GOT IT — START', {
+    setActions(btn(resumed ? 'CONTINUE — START' : 'START', {
       variant: 'primary tall', onclick: () => { primeAudio(); start(); },
     }));
   };
@@ -84,7 +118,7 @@ export function runBlock({ drill, rounds = 6, dayNumber = null, blockIndex = nul
     setActions(btn('CONTINUE', { variant: 'primary tall', onclick: () => onDone?.({ results, elapsed }) }));
   };
 
-  showTip();
+  showBrief();
 }
 
 // ---------------------------------------------------------------------------

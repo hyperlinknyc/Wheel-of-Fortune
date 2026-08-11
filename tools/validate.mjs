@@ -15,6 +15,7 @@ import {
 } from '../js/strategy.js';
 import { DAYS } from '../js/lessons.js';
 import { TIPS, EVENTS as TIP_EVENTS, resolveTip } from '../js/tips.js';
+import { BRIEFS } from '../js/briefs.js';
 import { OPPONENTS, planOpponentTurn } from '../js/game.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -357,7 +358,10 @@ const ROUND_COST = {
   'say-it-exactly': [0, 11,  2], 'cheat-recital':  [0,  5,  3],
   'full-game-sim':  [4,  8,  7],
 };
-const BLOCK_OVERHEAD = 13; // tip card + block summary
+// Briefing screen (~15s to read) + block summary (~7s). The briefing replaced
+// a bare cue card, so this went up: a returning user can tap START without
+// reading, but the model has to assume she reads it.
+const BLOCK_OVERHEAD = 22;
 
 if (DAYS.length !== 7) fail(`lesson plan has ${DAYS.length} days, expected 7`);
 for (const day of DAYS) {
@@ -377,6 +381,7 @@ for (const day of DAYS) {
     seconds += cost.reduce((a, c) => a + c, 0) * b.rounds;
     if (!b.drill.tip?.rule) fail(`drill "${b.drill.id}" has no tip card`);
     if (typeof b.drill.round !== 'function') fail(`drill "${b.drill.id}" has no round()`);
+    if (!BRIEFS[b.drill.id]) fail(`drill "${b.drill.id}" has no briefing — it would start unexplained`);
   }
 
   const minutes = seconds / 60;
@@ -384,6 +389,35 @@ for (const day of DAYS) {
     fail(`day ${day.n} session is ${minutes.toFixed(1)} min, outside the 10-15 minute band`);
   if (Math.abs(minutes - day.minutes) > 1.5)
     fail(`day ${day.n} advertises ${day.minutes} min but models at ${minutes.toFixed(1)} min`);
+}
+
+// --- Drill briefings --------------------------------------------------------
+// Every drill states its own point before it runs. Checked for shape and for
+// length: a briefing nobody finishes reading is the same as no briefing, and
+// the screen has to stay inside roughly the BLOCK_OVERHEAD read above or the
+// day drifts out of its 10-15 minute band.
+{
+  const runnable = new Set(Object.keys(ROUND_COST));
+  for (const [id, b] of Object.entries(BRIEFS)) {
+    const where = `brief "${id}"`;
+    if (!runnable.has(id)) fail(`${where} is for a drill that does not exist`);
+    if (!b.strategy || b.strategy.length < 120)
+      fail(`${where}: strategy is missing or too thin to explain anything`);
+    else if (b.strategy.length > 460)
+      fail(`${where}: strategy is ${b.strategy.length} chars, over the 460 she will actually read`);
+    if (!Array.isArray(b.doing) || b.doing.length < 2 || b.doing.length > 4)
+      fail(`${where}: "doing" should be 2-4 steps, found ${b.doing?.length}`);
+    for (const step of b.doing ?? []) {
+      if (typeof step !== 'string' || step.length < 15) fail(`${where}: a step is empty or trivial`);
+      else if (step.length > 130) fail(`${where}: a step is ${step.length} chars — steps are one line each`);
+    }
+    if (!b.scored || b.scored.length < 30) fail(`${where}: no "scored" line`);
+    else if (b.scored.length > 220) fail(`${where}: scored line is ${b.scored.length} chars, over 220`);
+  }
+  // Every drill the app can run needs one, not just the ones on the seven-day plan.
+  for (const id of runnable) {
+    if (!BRIEFS[id]) fail(`drill "${id}" has no briefing — it would start unexplained`);
+  }
 }
 
 // --- Service worker precache must cover every shipped file ------------------

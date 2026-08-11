@@ -340,7 +340,6 @@ p  { margin: 0 0 10px; }
 .ifthen .then { display: block; color: var(--text); }
 
 /* ---------- misc ---------- */
-.tip { border-left: 4px solid var(--accent); }
 .cue {
   font-size: 23px; font-weight: 800; line-height: 1.25; margin: 0 0 8px;
   color: var(--text);
@@ -368,6 +367,14 @@ p  { margin: 0 0 10px; }
 .method-day:first-of-type { border-top: 0; padding-top: 4px; }
 .list { margin: 0; padding-left: 20px; }
 .list li { margin-bottom: 6px; }
+/* Briefing steps: numbered, and roomier than a plain list because each one is
+   a full instruction rather than a bullet. */
+.list.steps { padding-left: 24px; margin: 0 0 10px; }
+.list.steps li { margin-bottom: 9px; font-size: 18px; line-height: 1.35; }
+.list.steps li::marker { color: var(--accent); font-weight: 800; }
+/* The briefing cue sits above two more cards, so it runs a size down from the
+   in-drill cue -- at 23px a three-line reflex pushed the steps off an SE. */
+.brief-cue { font-size: 21px; margin-bottom: 0; }
 .spacer { height: 12px; }
 .hr { height: 1px; background: var(--line); margin: 16px 0; }
 .chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; }
