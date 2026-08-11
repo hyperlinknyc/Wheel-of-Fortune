@@ -11,8 +11,11 @@ import { fileURLToPath } from 'node:url';
 import {
   BONUS_RANKING, BONUS_LETTER_SETS, FREE_LETTERS,
   WHEEL, BANKRUPT, LOSE_A_TURN, wheelCashWedges, WEDGE_AVERAGE,
+  REFLEXES, revealedFraction,
 } from '../js/strategy.js';
 import { DAYS } from '../js/lessons.js';
+import { TIPS, EVENTS as TIP_EVENTS, resolveTip } from '../js/tips.js';
+import { OPPONENTS, planOpponentTurn } from '../js/game.js';
 
 const ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const errors = [];
@@ -172,6 +175,119 @@ if (bonusCount < 60) fail(`only ${bonusCount} bonus-eligible puzzles, need at le
       fail('the two Bankrupt wedges are adjacent on the wheel');
     }
   }
+}
+
+// --- Coach tips -------------------------------------------------------------
+// Play mode coaches with the same words the drills do. A tip that invented its
+// own phrasing for a rule would be a second rulebook she has to reconcile, so
+// every tip either points at a REFLEX or carries its own complete text.
+{
+  const seen = new Set();
+  const stubCtx = {
+    event: 'turn', mode: 'game', pot: 3200, coverage: 0.5, isProperName: false,
+    category: 'PHRASE', spins: 3, vowelsBought: 1, roundsPlayed: 4, opponent: 'RITA',
+  };
+  for (const t of TIPS) {
+    const where = `tip "${t.id}"`;
+    if (!t.id) fail('a tip has no id');
+    else if (seen.has(t.id)) fail(`${where}: duplicate id`);
+    seen.add(t.id);
+
+    if (t.reflex && !REFLEXES[t.reflex]) fail(`${where}: unknown reflex "${t.reflex}"`);
+    if (t.when != null && typeof t.when !== 'function') fail(`${where}: when is not a function`);
+    if (!Array.isArray(t.on) || !t.on.length) fail(`${where}: has no "on" events`);
+    else for (const ev of t.on) {
+      if (!TIP_EVENTS.includes(ev)) fail(`${where}: listens for unknown event "${ev}"`);
+    }
+
+    const { cue, why } = resolveTip(t, stubCtx);
+    if (!cue) fail(`${where}: resolves to no cue`);
+    if (!why) fail(`${where}: resolves to no why`);
+    // The chip is one line on a phone. A long cue wraps to three and stops
+    // being glanceable, which is the only thing it is for.
+    if (cue && cue.length > 62) fail(`${where}: cue is ${cue.length} chars, max 62`);
+    if (why && why.length > 260) fail(`${where}: why is ${why.length} chars, max 260`);
+
+    try { t.when?.(stubCtx); } catch (e) { fail(`${where}: when() threw on a normal context (${e.message})`); }
+  }
+  if (!TIPS.some((t) => t.reflex)) fail('no coach tip is anchored to a REFLEX');
+
+  // Both directions must hold, or a tip silently never fires:
+  //   - every event a tip listens for is actually emitted by a Play screen
+  //   - every declared event has at least one tip, or it is dead weight
+  const playSrc = ['js/game.js', 'js/play.js']
+    .map((f) => readFileSync(resolve(ROOT, f), 'utf8')).join('\n');
+  for (const ev of TIP_EVENTS) {
+    if (!playSrc.includes(`ctx('${ev}'`)) fail(`tip event "${ev}" is never emitted by Play mode`);
+    if (!TIPS.some((t) => t.on?.includes(ev))) warn(`tip event "${ev}" has no tip listening for it`);
+  }
+}
+
+// --- Play-mode opponents ----------------------------------------------------
+// The opponents must be beatable and must not cheat. Both are checked by
+// simulation rather than by reading the constants, because the thing that
+// matters is the behaviour that actually reaches the screen.
+{
+  if (OPPONENTS.length !== 2) fail(`expected 2 opponents, found ${OPPONENTS.length}`);
+  for (const o of OPPONENTS) {
+    if (!o.name || !o.blurb || !o.tell) fail(`opponent "${o.id}" is missing name/blurb/tell`);
+    if (!(o.solveAt > 0.2 && o.solveAt < 1)) fail(`opponent "${o.id}" solveAt ${o.solveAt} out of range`);
+    if (!(o.nerve > 0 && o.nerve <= 1)) fail(`opponent "${o.id}" nerve ${o.nerve} out of range`);
+  }
+  // The two of them exist to demonstrate opposite lessons. If they converge,
+  // the game stops teaching anything.
+  if (Math.abs(OPPONENTS[0].solveAt - OPPONENTS[1].solveAt) < 0.15)
+    fail('the two opponents solve at nearly the same board coverage — they teach nothing apart');
+
+  const answer = 'LET THE CAT OUT OF THE BAG';
+  for (const o of OPPONENTS) {
+    let solves = 0;
+    let turnsWithLetters = 0;
+    for (let i = 0; i < 400; i++) {
+      const { events, solved } = planOpponentTurn(o, {
+        answer, revealed: new Set(), called: new Set(), pot: 0,
+      });
+      if (solved) solves++;
+      if (events.some((e) => e.type === 'call')) turnsWithLetters++;
+      // No opponent may call the same letter twice in one turn, and none may
+      // act after its turn has already ended.
+      const called = new Set();
+      let ended = false;
+      for (const e of events) {
+        if (ended) { fail(`opponent "${o.id}" keeps acting after its turn ended`); break; }
+        if (e.type === 'call' || e.type === 'vowel') {
+          if (called.has(e.letter)) { fail(`opponent "${o.id}" called ${e.letter} twice in one turn`); break; }
+          called.add(e.letter);
+          if (!e.count) ended = true;
+        }
+        if (e.type === 'bankrupt' || e.type === 'lose') ended = true;
+        if (e.type === 'solve') ended = true;
+      }
+    }
+    const rate = solves / 400;
+    if (rate > 0.7) fail(`opponent "${o.id}" solves ${(rate * 100).toFixed(0)}% of turns from an empty board — unbeatable`);
+    if (turnsWithLetters < 200) fail(`opponent "${o.id}" rarely calls a letter — its turns will be dull to watch`);
+  }
+  // Dean should out-solve Rita from an empty board; that gap IS the lesson.
+  const rateOf = (o) => {
+    let n = 0;
+    for (let i = 0; i < 600; i++) {
+      if (planOpponentTurn(o, { answer, revealed: new Set(), called: new Set(), pot: 0 }).solved) n++;
+    }
+    return n / 600;
+  };
+  if (rateOf(OPPONENTS[1]) <= rateOf(OPPONENTS[0]))
+    fail('the early solver does not actually beat the grinder — the game teaches the wrong lesson');
+}
+
+// --- revealedFraction -------------------------------------------------------
+{
+  if (revealedFraction('CAT', new Set()) !== 0) fail('revealedFraction: empty set should be 0');
+  if (revealedFraction('CAT', new Set(['C', 'A', 'T'])) !== 1) fail('revealedFraction: full set should be 1');
+  if (Math.abs(revealedFraction('A B', new Set(['A'])) - 0.5) > 1e-9)
+    fail('revealedFraction: spaces must not count as letter slots');
+  if (revealedFraction("DON'T", new Set(['D', 'O', 'N', 'T'])) !== 1)
+    fail('revealedFraction: apostrophes must not count as letter slots');
 }
 
 // --- Name tables ------------------------------------------------------------

@@ -71,6 +71,10 @@ js/ui.js              hyperscript, router, board renderer, timers, audio
 js/lessons.js         the seven-day plan
 js/cheatsheet.js      the green-room screen
 js/drills/            the ten drills
+js/play.js            Play mode chooser, and the solo round
+js/game.js            three rounds against two computer opponents
+js/wheel.js           the SVG wheel, shared by both Play modes
+js/tips.js            optional coach tips, shown as non-blocking chips
 data/puzzles.json     681 puzzles, generated -- do not hand-edit
 data/names.json       length-indexed name tables
 tools/                build, validation, icon generation
@@ -94,3 +98,33 @@ never disagree:
 - **Category ranking** — take / tolerate / hard avoid, with the absolute rule
   that a proper-noun category is never taken when anything else is on offer
 - **Letter-set overrides** per category, including that **Y is a consonant**
+
+## Play mode
+
+Two ways in, from **PLAY A GAME** on the home screen:
+
+- **Play the game** — three rounds against Rita and Dean, with a $1,000 round
+  minimum and the turn passing on any miss, Bankrupt, Lose-a-Turn or wrong solve.
+- **Just spin** — one board, no opponents, no clock.
+
+The opponents are the two halves of the lesson rather than set dressing. Rita
+will not consider solving until the board is 76% showing, so she keeps spinning
+puzzles she has already got and gets punished for it; Dean goes at 44% and
+quietly wins. Neither can see the answer when choosing a letter — they pick by
+English frequency out of what is still uncalled, and their solve attempts are
+rolled against how much of the board is actually lit. `validate.mjs` simulates
+several hundred turns for each and fails the build if either becomes unbeatable
+or if the early solver stops out-solving the grinder, since that gap *is* the
+lesson.
+
+**Nothing in Play writes to the results log.** If messing about for fun could
+move Category Discipline, the number she is driving to 100% would stop meaning
+anything and the adaptive engine would start reweighting itself off play data.
+Play totals live in their own keys.
+
+**Coach tips** are one-line chips under the board — tap to open the reasoning,
+ignore them entirely if you like. They never block a round and have no dismiss
+button; a tip retires itself after four sightings, and the lot can be switched
+off in Settings. Every tip is anchored to a cue in `js/strategy.js`, and
+`validate.mjs` fails if a tip invents its own phrasing for a rule or listens for
+a moment Play mode never emits.

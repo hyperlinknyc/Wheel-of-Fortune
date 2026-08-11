@@ -9,6 +9,7 @@ import { cheatSheetScreen } from './cheatsheet.js';
 import { methodScreen } from './method.js';
 import { glossaryScreen } from './glossary.js';
 import { playScreen } from './play.js';
+import { gameScreen } from './game.js';
 import { runBlock } from './drills/common.js';
 import { solveOrSpin, vowelDrill, vowelNameDrill } from './drills/decision.js';
 import { bonusCategory, bonusLetters, bonusSim } from './drills/bonus.js';
@@ -105,8 +106,8 @@ function homeScreen() {
       variant: 'primary tall', sub: `Day ${dayNumber} — ${day.minutes} min`,
       onclick: () => { primeAudio(); go('#/days'); },
     }),
-    btn('JUST PLAY A ROUND', {
-      variant: 'ghost', sub: 'spin the wheel, no scoring',
+    btn('PLAY A GAME', {
+      variant: 'ghost', sub: 'spin the wheel — no scoring',
       onclick: () => { primeAudio(); go('#/play'); },
     })
   );
@@ -173,10 +174,26 @@ function settingsScreen() {
   };
   renderMic();
 
+  const tipRow = h('div');
+  const renderTips = () => {
+    tipRow.replaceChildren(
+      h('h3', {}, 'Coach tips in Play'),
+      h('p', { class: 'muted' },
+        'A one-line note during a game, tucked under the board. Tap it to see why, ' +
+        'or ignore it — it never blocks a round. Each tip retires itself once you have seen it a few times.'),
+      btn(store.tipsOn() ? 'COACH TIPS: ON' : 'COACH TIPS: OFF', {
+        variant: store.tipsOn() ? 'good small' : 'small',
+        onclick: () => { store.setTipsOn(!store.tipsOn()); renderTips(); },
+      })
+    );
+  };
+  renderTips();
+
   setScreen(
     card(h('h3', {}, 'Tape date'), dateInput,
       h('p', { class: 'muted', style: { marginTop: '10px' } },
         `${store.daysUntilTaping()} days from today.`)),
+    card(tipRow),
     card(micRow),
     card(
       h('h3', {}, 'Progress'),
@@ -221,6 +238,7 @@ async function boot() {
   route('method', methodScreen);
   route('glossary', glossaryScreen);
   route('play', playScreen);
+  route('game', gameScreen);
   route('settings', settingsScreen);
   route('days', () => import('./lessons.js').then((m) => m.lessonTreeScreen()));
   route('day/:n', ({ n }) => runDay(Number(n)));

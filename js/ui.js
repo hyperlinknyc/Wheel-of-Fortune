@@ -512,7 +512,7 @@ function syncNav(raw) {
     home: 'home', settings: 'home', days: 'home', day: 'home', method: 'home',
     practice: 'practice', drill: 'practice',
     cheat: 'cheat', glossary: 'cheat',
-    play: 'practice',
+    play: 'practice', game: 'practice',
   })[section] || 'home';
   for (const b of document.querySelectorAll('.util[data-nav]')) {
     b.classList.toggle('accent', b.dataset.nav === active);

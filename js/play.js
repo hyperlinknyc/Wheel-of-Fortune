@@ -9,56 +9,82 @@
 // loud, then self-score. No typing -- same as everywhere else.
 
 import {
-  h, btn, setScreen, setActions, setTop, renderBoard, revealLetter, revealAll,
+  h, btn, setScreen, setActions, setTop, renderBoard, revealAll,
   card, go, after, ding, buzzer, primeAudio, screenOpts,
 } from './ui.js';
 import { pick } from './data.js';
 import * as store from './store.js';
-import { WHEEL, BANKRUPT, LOSE_A_TURN, VOWEL_COST, money } from './strategy.js';
+import { tipChip } from './tips.js';
+import { OPPONENTS } from './game.js';
+import {
+  WHEEL, BANKRUPT, LOSE_A_TURN, VOWEL_COST, money, revealedFraction,
+} from './strategy.js';
+import { wheelSvg, spinAnimation, lockRotor } from './wheel.js';
 
 const CONSONANTS = 'BCDFGHJKLMNPQRSTVWXYZ'.split('');
 const VOWELS = 'AEIOU'.split('');
-const SEG = 360 / WHEEL.length;
 
 const reducedMotion = () =>
   typeof window !== 'undefined'
   && window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
 
 // ---------------------------------------------------------------------------
-// The wheel, drawn as SVG so it scales cleanly and needs no assets
+// The chooser -- one tap, and it says what each mode is for
 // ---------------------------------------------------------------------------
 
-const wedgeClass = (w) =>
-  w === BANKRUPT ? 'bankrupt' : w === LOSE_A_TURN ? 'lose' : 'cash';
+export function playScreen() {
+  setTop({ title: 'PLAY', back: () => go('#/home') });
+  const p = store.playStats();
+  const g = store.gameStats();
 
-const shortLabel = (w) =>
-  w === BANKRUPT ? 'BANK' : w === LOSE_A_TURN ? 'LOSE' : String(w);
+  setScreen(
+    h('p', { class: 'muted' },
+      'Neither of these moves your training stats. They are here so the reflexes ' +
+      'get used somewhere that feels like the show.'),
 
-function wheelSvg() {
-  const C = 150;
-  const R = 148;
-  const pt = (deg, r) => {
-    const rad = (deg - 90) * Math.PI / 180;
-    return [C + r * Math.cos(rad), C + r * Math.sin(rad)];
-  };
+    h('button', {
+      class: 'day', type: 'button',
+      onclick: () => { primeAudio(); go('#/game'); },
+    },
+      h('div', { class: 'n' }, '★'),
+      h('div', { class: 't' },
+        h('b', {}, 'Play the game'),
+        h('span', {}, `Three rounds against ${OPPONENTS[0].name} and ${OPPONENTS[1].name}`))),
 
-  const parts = WHEEL.map((w, i) => {
-    const a1 = i * SEG;
-    const a2 = a1 + SEG;
-    const [x1, y1] = pt(a1, R);
-    const [x2, y2] = pt(a2, R);
-    const d = `M ${C} ${C} L ${x1.toFixed(2)} ${y1.toFixed(2)} ` +
-      `A ${R} ${R} 0 0 1 ${x2.toFixed(2)} ${y2.toFixed(2)} Z`;
-    const mid = a1 + SEG / 2;
-    const [tx, ty] = pt(mid, R * 0.72);
-    return `<path d="${d}" class="wedge ${wedgeClass(w)}"/>` +
-      `<text x="${tx.toFixed(2)}" y="${ty.toFixed(2)}" class="wedge-label ${wedgeClass(w)}"` +
-      ` transform="rotate(${mid.toFixed(2)} ${tx.toFixed(2)} ${ty.toFixed(2)})">${shortLabel(w)}</text>`;
-  }).join('');
+    h('button', {
+      class: 'day', type: 'button',
+      onclick: () => { primeAudio(); soloScreen(); },
+    },
+      h('div', { class: 'n' }, '◎'),
+      h('div', { class: 't' },
+        h('b', {}, 'Just spin'),
+        h('span', {}, 'One board, no opponents, no clock'))),
 
-  return `<svg viewBox="0 0 300 300" class="wheel-svg" aria-hidden="true">
-    <g class="wheel-rotor">${parts}<circle cx="${C}" cy="${C}" r="26" class="wheel-hub"/></g>
-  </svg>`;
+    card(
+      h('h3', {}, 'Who you are playing'),
+      ...OPPONENTS.map((o) => h('div', { class: 'mathline wide' },
+        h('span', { class: 'l' }, o.name),
+        h('span', { class: 'v' }, o.blurb)))),
+
+    (p.rounds || g.games) ? card(
+      h('h3', {}, 'So far'),
+      g.games ? h('div', { class: 'mathline' },
+        h('span', { class: 'l' }, 'Games won'),
+        h('span', { class: 'v' }, `${g.wins} of ${g.games}`)) : null,
+      p.rounds ? h('div', { class: 'mathline' },
+        h('span', { class: 'l' }, 'Solo rounds solved'),
+        h('span', { class: 'v' }, `${p.wins} of ${p.rounds}`)) : null,
+      h('div', { class: 'mathline em' },
+        h('span', { class: 'l' }, 'Best single round'),
+        h('span', { class: 'v good' }, money(p.best)))) : null
+  );
+
+  setActions(
+    btn('PLAY THE GAME', {
+      variant: 'primary tall', sub: 'three rounds, two opponents',
+      onclick: () => { primeAudio(); go('#/game'); },
+    })
+  );
 }
 
 // ---------------------------------------------------------------------------
@@ -73,27 +99,24 @@ function newRound() {
     called: new Set(),
     roundMoney: 0,
     spins: 0,
+    vowelsBought: 0,
     over: false,
   };
 }
 
 const lettersIn = (answer) => new Set(answer.replace(/[^A-Z]/g, ''));
 
-const remaining = (state, pool) => {
-  const inAnswer = lettersIn(state.puzzle.answer);
-  return pool.filter((c) => !state.called.has(c) && inAnswer.has(c));
-};
-
-const anyConsonantsLeft = (s) => remaining(s, CONSONANTS).length > 0;
-const anyVowelsLeft = (s) => remaining(s, VOWELS).length > 0;
+// Uncalled, NOT "uncalled and actually in the answer". Filtering by the answer
+// would grey out BUY A VOWEL exactly when no vowels were left to find, which
+// quietly tells her something the board has not shown her yet.
+const uncalled = (state, pool) => pool.filter((c) => !state.called.has(c));
 
 // ---------------------------------------------------------------------------
-// Screens
+// Solo round
 // ---------------------------------------------------------------------------
 
-export function playScreen() {
+export function soloScreen() {
   let state = newRound();
-  let rotation = 0;
 
   const board = () => renderBoard(state.puzzle.answer, state.revealed);
 
@@ -105,6 +128,19 @@ export function playScreen() {
     return wrap;
   };
 
+  const ctx = (event, extra = {}) => ({
+    event,
+    mode: 'solo',
+    pot: state.roundMoney,
+    coverage: revealedFraction(state.puzzle.answer, state.revealed),
+    isProperName: state.puzzle.isProperName,
+    category: state.puzzle.category,
+    spins: state.spins,
+    vowelsBought: state.vowelsBought,
+    roundsPlayed: store.playStats().rounds,
+    ...extra,
+  });
+
   const calledStrip = () => {
     const used = [...state.called].sort();
     if (!used.length) return null;
@@ -113,9 +149,9 @@ export function playScreen() {
 
   // --- main round screen -----------------------------------------------
   const showRound = (flash = null) => {
-    setTop({ title: 'PLAY', back: () => go('#/home') });
-    const canVowel = state.roundMoney >= VOWEL_COST && anyVowelsLeft(state);
-    const canSpin = anyConsonantsLeft(state);
+    setTop({ title: 'JUST SPIN', back: () => go('#/play') });
+    const canVowel = state.roundMoney >= VOWEL_COST && uncalled(state, VOWELS).length > 0;
+    const canSpin = uncalled(state, CONSONANTS).length > 0;
 
     setScreen(
       h('div', { class: 'cat tight' }, state.puzzle.category),
@@ -126,6 +162,7 @@ export function playScreen() {
         h('h3', {}, 'This round'),
         h('div', { class: 'big-num' }, money(state.roundMoney)),
         calledStrip()),
+      tipChip(ctx('turn')),
       screenOpts({ dense: true })
     );
 
@@ -133,7 +170,7 @@ export function playScreen() {
       btn('SPIN', {
         variant: 'primary tall',
         disabled: !canSpin,
-        sub: canSpin ? null : 'no consonants left — solve it',
+        sub: canSpin ? null : 'every consonant has been called',
         onclick: () => { primeAudio(); showWheel(); },
       }),
       h('div', { class: 'row' },
@@ -151,16 +188,9 @@ export function playScreen() {
   const showWheel = () => {
     const landed = Math.floor(Math.random() * WHEEL.length);
     const wedge = WHEEL[landed];
-
-    // Land the chosen wedge under the pointer at 12 o'clock, plus whole
-    // turns for the spin itself and a little jitter so it never looks canned.
-    const jitter = (Math.random() - 0.5) * (SEG * 0.55);
-    const target = -(landed * SEG + SEG / 2) + jitter;
-    rotation += 360 * 4 + (((target - rotation) % 360) + 360) % 360;
-
     const spinMs = reducedMotion() ? 200 : 1700;
 
-    setTop({ title: 'PLAY' });
+    setTop({ title: 'JUST SPIN' });
     setScreen(
       h('div', { class: 'wheel-wrap' },
         h('div', { class: 'wheel-pointer' }),
@@ -169,14 +199,7 @@ export function playScreen() {
       screenOpts({ dense: true })
     );
     setActions();
-
-    const rotor = document.querySelector('.wheel-rotor');
-    if (rotor) {
-      rotor.style.transition = `transform ${spinMs}ms cubic-bezier(.17,.67,.21,1)`;
-      // Next frame, so the browser paints the start position first.
-      requestAnimationFrame(() => { rotor.style.transform = `rotate(${rotation}deg)`; });
-    }
-
+    spinAnimation(landed, spinMs);
     after(spinMs + 60, () => landOn(wedge));
   };
 
@@ -197,6 +220,7 @@ export function playScreen() {
           h('h2', { style: { color: 'var(--bad)' } }, 'BANKRUPT'),
           h('p', {}, lost ? `${money(lost)} gone.` : 'Nothing in the pot — no harm done.'),
           h('p', { class: 'muted' }, 'This is the risk every extra spin is buying.')),
+        tipChip(ctx('bankrupt', { pot: lost })),
         screenOpts({ dense: true })
       );
       lockRotor();
@@ -214,6 +238,7 @@ export function playScreen() {
         h('div', { class: 'card center' },
           h('h2', {}, 'LOSE A TURN'),
           h('p', {}, 'Pot is safe. The spin is wasted.')),
+        tipChip(ctx('lose-turn')),
         screenOpts({ dense: true })
       );
       lockRotor();
@@ -223,15 +248,6 @@ export function playScreen() {
 
     ding();
     showConsonantPicker(wedge);
-  };
-
-  /** Freeze the rotor where it stopped so a re-render cannot snap it back. */
-  const lockRotor = () => {
-    const rotor = document.querySelector('.wheel-rotor');
-    if (rotor) {
-      rotor.style.transition = 'none';
-      rotor.style.transform = `rotate(${rotation}deg)`;
-    }
   };
 
   // --- letter pickers ---------------------------------------------------
@@ -250,7 +266,7 @@ export function playScreen() {
   };
 
   const showConsonantPicker = (wedge) => {
-    setTop({ title: 'PLAY' });
+    setTop({ title: 'JUST SPIN' });
     // Compact header: the full three-line card pushed the last letter row
     // (Z, alone on row 5) below the fold on an iPhone 13.
     setScreen(
@@ -264,7 +280,7 @@ export function playScreen() {
   };
 
   const showVowelPicker = () => {
-    setTop({ title: 'PLAY' });
+    setTop({ title: 'JUST SPIN' });
     setScreen(
       h('p', { class: 'center landed-line' },
         h('b', {}, `−${money(VOWEL_COST)}`), ' — pick a vowel'),
@@ -298,7 +314,8 @@ export function playScreen() {
 
   const resolveVowel = (letter, hit) => {
     state.called.add(letter);
-    state.roundMoney -= VOWEL_COST;
+    state.vowelsBought++;
+    state.roundMoney = Math.max(0, state.roundMoney - VOWEL_COST);
     if (hit) {
       state.revealed.add(letter);
       ding();
@@ -311,13 +328,14 @@ export function playScreen() {
 
   // --- solving ----------------------------------------------------------
   const showSolve = () => {
-    setTop({ title: 'PLAY' });
+    setTop({ title: 'JUST SPIN' });
     setScreen(
       h('div', { class: 'cat tight' }, state.puzzle.category),
       board(),
       h('div', { class: 'card center' },
         h('p', { class: 'cue' }, 'Say it out loud.'),
         h('p', { class: 'why' }, `${money(state.roundMoney)} on the line.`)),
+      tipChip(ctx('solving')),
       screenOpts({ dense: true })
     );
     setActions(
@@ -329,7 +347,7 @@ export function playScreen() {
   const revealAnswer = () => {
     const wrap = board();
     revealAll(wrap);
-    setTop({ title: 'PLAY' });
+    setTop({ title: 'JUST SPIN' });
     setScreen(
       h('div', { class: 'cat tight' }, state.puzzle.category),
       wrap,
@@ -360,7 +378,7 @@ export function playScreen() {
           won ? `${state.spins} spin${state.spins === 1 ? '' : 's'} to get there.`
             : `${money(state.roundMoney)} was on the table.`)),
       card(
-        h('h3', {}, 'Play totals'),
+        h('h3', {}, 'Solo totals'),
         h('div', { class: 'mathline' },
           h('span', { class: 'l' }, 'Rounds played'),
           h('span', { class: 'v' }, String(s.rounds))),
@@ -381,7 +399,7 @@ export function playScreen() {
         variant: 'primary tall',
         onclick: () => { state = newRound(); showRound(); },
       }),
-      btn('DONE', { variant: 'ghost', onclick: () => go('#/home') })
+      btn('PLAY THE REAL GAME', { variant: 'ghost', onclick: () => go('#/game') })
     );
   };
 

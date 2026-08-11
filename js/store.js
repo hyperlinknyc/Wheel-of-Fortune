@@ -52,9 +52,11 @@ function blank() {
     lessons: {},
     plan: { weights: null, lastRecomputeCount: 0, card: null, history: [] },
     recent: [],
-    settings: { mic: false },
+    settings: { mic: false, tips: true },
     progress: {},
     play: { rounds: 0, wins: 0, banked: 0, best: 0 },
+    game: { games: 0, wins: 0, rounds: 0, roundWins: 0, best: 0 },
+    tips: {},
   };
 }
 
@@ -225,6 +227,45 @@ export function recordPlayRound({ won, amount = 0 }) {
 }
 
 export const playStats = () => ({ ...(state.play ?? { rounds: 0, wins: 0, banked: 0, best: 0 }) });
+
+const blankGame = () => ({ games: 0, wins: 0, rounds: 0, roundWins: 0, best: 0 });
+
+/** A finished three-round game against the house. Same isolation as play. */
+export function recordGame({ won, total = 0, rounds = 0, roundWins = 0 }) {
+  const g = (state.game ??= blankGame());
+  g.games++;
+  g.rounds += rounds;
+  g.roundWins += roundWins;
+  if (won) g.wins++;
+  g.best = Math.max(g.best, total);
+  touchStreak();
+  flush();
+}
+
+export const gameStats = () => ({ ...(state.game ?? blankGame()) });
+
+// ---------------------------------------------------------------------------
+// Coach tips
+//
+// Counting views is what lets a tip retire itself once she has clearly taken
+// it on board. A coach repeating a note she already follows is just noise, and
+// noise is how an optional thing becomes a thing she turns off.
+// ---------------------------------------------------------------------------
+
+/** Undefined means "never set", which is on -- tips ship enabled. */
+export const tipsOn = () => state.settings?.tips !== false;
+
+export function setTipsOn(on) {
+  (state.settings ??= {}).tips = !!on;
+  save();
+}
+
+export const tipViews = (id) => (state.tips ?? {})[id] ?? 0;
+
+export function tipShown(id) {
+  (state.tips ??= {})[id] = tipViews(id) + 1;
+  save();
+}
 
 export const isDayComplete = (n) => !!state.lessons[n]?.done;
 export const isBlockComplete = (n, blockIndex) => !!state.lessons[n]?.blocks?.[blockIndex];

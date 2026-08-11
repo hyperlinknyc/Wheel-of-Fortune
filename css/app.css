@@ -417,3 +417,65 @@ p  { margin: 0 0 10px; }
 .landed-line b { font-size: 27px; color: var(--accent); }
 .flash.good { border-color: var(--good); }
 .flash.bad { border-color: var(--bad); }
+
+/* ---------- play mode: the three-player game ---------- */
+.round-label {
+  text-align: center; font-size: 14px; font-weight: 800; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--muted); margin-bottom: 8px;
+}
+.scores { display: flex; gap: 6px; margin-bottom: 12px; }
+.score {
+  flex: 1 1 0; min-width: 0;
+  border: 2px solid var(--line); border-radius: 12px;
+  background: var(--surface); padding: 7px 4px; text-align: center;
+}
+.score.on { border-color: var(--accent); background: var(--surface-2); }
+.score .who {
+  font-size: 12px; font-weight: 800; letter-spacing: .08em; color: var(--muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.score.on .who { color: var(--accent); }
+.score .amt { font-family: var(--mono); font-size: 19px; font-weight: 800; line-height: 1.25; }
+.score .tot { font-size: 11px; color: var(--muted); white-space: nowrap; }
+
+/* Running commentary on an opponent's turn. Oldest lines fade back so the
+   newest one reads as "what just happened" without any motion. */
+.turn-log { min-height: 96px; margin-top: 4px; }
+.log-line {
+  margin: 0 0 6px; font-size: 17px; line-height: 1.35;
+  color: var(--muted); opacity: .55;
+}
+.log-line.now { opacity: 1; color: var(--text); font-weight: 700; font-size: 19px; }
+.flash-line {
+  text-align: center; font-size: 18px; font-weight: 700; margin: 0 0 8px;
+}
+.flash-line.good { color: var(--good); }
+.flash-line.bad { color: var(--bad); }
+
+/* ---------- coach tip chip ----------
+   Optional by construction: one line she can walk past, no dismiss button,
+   never covering anything. Tapping expands it in place. */
+.coach {
+  display: flex; flex-direction: column; justify-content: center;
+  width: 100%; min-height: 60px; margin: 4px 0 12px; padding: 10px 12px;
+  text-align: left; font-family: var(--font); color: var(--text);
+  background: var(--surface); border: 1px solid var(--line);
+  border-left: 4px solid var(--accent); border-radius: 10px;
+  touch-action: manipulation;
+}
+.coach:active { background: var(--surface-2); }
+.coach-head { display: flex; align-items: center; gap: 9px; }
+.coach-tag {
+  flex: 0 0 auto; font-size: 11px; font-weight: 800; letter-spacing: .12em;
+  color: var(--on-accent); background: var(--accent);
+  padding: 2px 6px; border-radius: 4px;
+}
+.coach-cue { flex: 1 1 auto; min-width: 0; font-size: 17px; font-weight: 700; line-height: 1.3; }
+.coach-caret { flex: 0 0 auto; font-size: 20px; color: var(--muted); line-height: 1; }
+.coach-caret::before { content: '+'; }
+.coach.open .coach-caret::before { content: '−'; }
+.coach-why {
+  display: none;
+  margin: 9px 0 0; font-size: 17px; line-height: 1.45; color: var(--muted);
+}
+.coach.open .coach-why { display: block; }

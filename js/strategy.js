@@ -12,6 +12,11 @@ export const CEDED_TURN_COST = 0.20;   // TURN_ENDING_ODDS doubled
 export const COPIES_DIVISOR = 3000;
 export const ALWAYS_SOLVE_ABOVE = 9000;
 export const VOWEL_COST = 250;
+// A solved round always pays at least this, the way the show guarantees a
+// minimum. It matters for training as well as realism: without it, solving
+// early off a small pot can bank literally nothing, which argues against
+// exactly the reflex every drill in this app is trying to build.
+export const ROUND_MINIMUM = 1000;
 
 /**
  * The wheel used by Play mode.
@@ -35,6 +40,22 @@ export const WHEEL = [
 ];
 
 export const wheelCashWedges = () => WHEEL.filter((w) => typeof w === 'number');
+
+/**
+ * Fraction of the letter slots on a board that are showing.
+ *
+ * This is the number both Play modes reason about: it is what decides when an
+ * opponent goes for a solve, and it is what the coach tips use to say "the
+ * board is 60% there and you are still spinning".
+ */
+export function revealedFraction(answer, revealed) {
+  const letters = answer.replace(/[^A-Z]/g, '');
+  if (!letters.length) return 0;
+  const set = revealed instanceof Set ? revealed : new Set(revealed ?? []);
+  let n = 0;
+  for (const ch of letters) if (set.has(ch)) n++;
+  return n / letters.length;
+}
 
 // ---------------------------------------------------------------------------
 // The five strong-solver mistakes. Every logged error carries one of these.
