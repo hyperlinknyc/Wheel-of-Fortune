@@ -38,27 +38,7 @@ export function playScreen() {
   const g = store.gameStats();
 
   setScreen(
-    h('p', { class: 'muted' },
-      'Neither of these moves your training stats. They are here so the reflexes ' +
-      'get used somewhere that feels like the show.'),
-
-    h('button', {
-      class: 'day', type: 'button',
-      onclick: () => { primeAudio(); go('#/game'); },
-    },
-      h('div', { class: 'n' }, '★'),
-      h('div', { class: 't' },
-        h('b', {}, 'Play the game'),
-        h('span', {}, `Three rounds against ${OPPONENTS[0].name} and ${OPPONENTS[1].name}`))),
-
-    h('button', {
-      class: 'day', type: 'button',
-      onclick: () => { primeAudio(); soloScreen(); },
-    },
-      h('div', { class: 'n' }, '◎'),
-      h('div', { class: 't' },
-        h('b', {}, 'Just spin'),
-        h('span', {}, 'One board, no opponents, no clock'))),
+    h('p', { class: 'muted' }, 'Neither of these moves your training stats.'),
 
     card(
       h('h3', {}, 'Who you are playing'),
@@ -79,10 +59,16 @@ export function playScreen() {
         h('span', { class: 'v good' }, money(p.best)))) : null
   );
 
+  // The two modes are the two buttons. Listing them again as tiles in the
+  // screen body was the same choice twice and cost the fold.
   setActions(
     btn('PLAY THE GAME', {
-      variant: 'primary tall', sub: 'three rounds, two opponents',
+      variant: 'primary tall', sub: `three rounds against ${OPPONENTS[0].name} and ${OPPONENTS[1].name}`,
       onclick: () => { primeAudio(); go('#/game'); },
+    }),
+    btn('JUST SPIN', {
+      variant: 'ghost', sub: 'one board, no opponents',
+      onclick: () => { primeAudio(); soloScreen(); },
     })
   );
 }

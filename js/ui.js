@@ -54,6 +54,14 @@ export function setScreen(...nodes) {
 
 export function setActions(...nodes) {
   actionsEl().replaceChildren(...nodes.flat(9).filter(Boolean));
+  // Boards are sized against the height #screen actually has, and #screen is
+  // whatever the action bar leaves it. Screens paint in the order
+  // setScreen-then-setActions, so the sizing done inside setScreen measured
+  // against the *previous* screen's buttons -- on a tall bar (SPIN plus a
+  // second row) that overestimated the space by ~180px and left the bottom
+  // row of tiles clipped behind the buttons. Re-size once the bar is real.
+  // Still the same tick, so nothing has painted in between and it cannot flash.
+  sizeAllBoards();
 }
 
 export function setTop({ title = 'WHEEL TRAINER', back = null, right = '' } = {}) {

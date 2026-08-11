@@ -17,7 +17,7 @@
 
 import {
   h, btn, setScreen, setActions, setTop, renderBoard, revealAll,
-  card, go, after, ding, buzzer, primeAudio, screenOpts,
+  card, go, after, ding, buzzer, primeAudio, screenOpts, mathDisclosure,
 } from './ui.js';
 import { pick } from './data.js';
 import * as store from './store.js';
@@ -629,9 +629,11 @@ export function gameScreen() {
         h('h2', { style: { color: youWon ? 'var(--good)' : 'var(--bad)' } },
           winner ? (youWon ? `You banked ${money(banked)}` : `${winner.name} banked ${money(banked)}`)
             : 'Nobody solved it'),
-        h('p', { class: 'muted' }, r.puzzle.answer),
+        // The board directly above is already showing the answer in full;
+        // repeating it here just cost a line the totals needed.
         winner && winner.round < ROUND_MINIMUM
-          ? h('p', { class: 'muted tiny' }, `${money(ROUND_MINIMUM)} round minimum applied.`) : null),
+          ? h('p', { class: 'muted tiny', style: { margin: 0 } },
+              `${money(ROUND_MINIMUM)} round minimum applied.`) : null),
       card(
         h('h3', {}, 'Totals'),
         ...game.players.map((p) => h('div', { class: `mathline${p.human ? ' em' : ''}` },
@@ -682,29 +684,24 @@ export function gameScreen() {
         h('h3', {}, tied ? 'Tied at the top' : 'Winner'),
         h('div', { class: 'big-num', style: { color: youWon ? 'var(--good)' : 'var(--text)' } },
           !leaders.length ? 'NOBODY' : leaders.map((p) => p.name).join(' & ')),
-        h('p', { class: 'muted' },
+        h('p', { class: 'muted', style: { margin: 0 } },
           !leaders.length ? 'Three rounds, nothing banked.'
-            : tied ? `${money(top)} each. On the show that goes to a tiebreaker.`
-              : `${money(top)} across ${ROUNDS} rounds${youWon ? ' — you would be going to the bonus round.' : '.'}`)),
+            : tied ? `${money(top)} each — that goes to a tiebreaker.`
+              : `${money(top)} across ${ROUNDS} rounds.`),
+        youWon ? h('p', { class: 'tiny' }, 'You would be going to the bonus round.') : null),
       card(
         h('h3', {}, 'Final standings'),
         ...standings.map((p) => h('div', { class: `mathline${p.human ? ' em' : ''}` },
           h('span', { class: 'l' }, p.name),
           h('span', { class: `v${p.human ? (youWon ? ' good' : tied ? '' : ' bad') : ''}` }, money(p.total))))),
-      card(
-        h('h3', {}, 'Play totals'),
-        h('div', { class: 'mathline' },
-          h('span', { class: 'l' }, 'Games played'),
-          h('span', { class: 'v' }, String(s.games))),
-        h('div', { class: 'mathline' },
-          h('span', { class: 'l' }, 'Games won'),
-          h('span', { class: 'v' }, `${s.wins} of ${s.games}`)),
-        h('div', { class: 'mathline' },
-          h('span', { class: 'l' }, 'Rounds taken'),
-          h('span', { class: 'v' }, `${s.roundWins} of ${s.rounds}`)),
-        h('div', { class: 'mathline em' },
-          h('span', { class: 'l' }, 'Best game'),
-          h('span', { class: 'v good' }, money(s.best)))),
+      // Collapsed: the standings are what she wants on this screen, and a
+      // second full card of lifetime totals pushed them under the buttons.
+      card(mathDisclosure([
+        { label: 'Games played', value: String(s.games) },
+        { label: 'Games won', value: `${s.wins} of ${s.games}` },
+        { label: 'Rounds taken', value: `${s.roundWins} of ${s.rounds}` },
+        { label: 'Best game', value: money(s.best), emphasis: true, good: true },
+      ], 'Your play record')),
       h('p', { class: 'muted center tiny' },
         'Play never moves your training stats — only drills do.'),
       screenOpts({ dense: true })
