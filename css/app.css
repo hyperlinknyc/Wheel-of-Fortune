@@ -207,16 +207,18 @@ p  { margin: 0 0 10px; }
 .timer-bar.hot > i { background: var(--bad); }
 
 /* ---------- stat rings ---------- */
-.rings { display: flex; gap: 10px; margin: 0 0 14px; }
+.rings { display: flex; gap: 8px; margin: 0 0 14px; }
 .countdown { display: block; width: 100%; font-family: var(--font); cursor: pointer; border-color: var(--accent); }
 .countdown:active { background: var(--surface-2); }
 .countdown-num { font-size: 60px; color: var(--accent); margin: 2px 0 4px; }
 .tiny { font-size: 13px; opacity: .7; margin: 6px 0 0; }
-.ring { flex: 1; text-align: center; }
+.ring { flex: 1 1 0; min-width: 0; text-align: center; }
 .ring svg { width: 100%; max-width: 92px; height: auto; }
-.ring .rlabel { font-size: 12px; font-weight: 800; letter-spacing: .07em;
+/* Labels wrap to two lines on narrow phones — nowrap + ellipsis was clipping
+   "Name recall" past the right edge at 390px after the 20px readability bump. */
+.ring .rlabel { font-size: 11px; font-weight: 800; letter-spacing: .04em;
   color: var(--muted); text-transform: uppercase; margin-top: 2px; line-height: 1.2;
-  white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  overflow-wrap: anywhere; }
 .ring .rval { font-family: var(--mono); font-size: 20px; font-weight: 800; }
 
 /* ---------- lesson tree ---------- */
