@@ -1,18 +1,24 @@
 /* Wheel Trainer -- a training instrument, not a game.
-   Dark only, high contrast, one accent for right and one for wrong. */
+   Dark only. Palette is Wheel-of-Fortune stage blue + board gold,
+   tuned for older eyes: brighter secondary text, AAA body contrast. */
 
 :root {
-  --bg:        #0A0C10;
-  --surface:   #141822;
-  --surface-2: #1C2230;
-  --line:      #2A3344;
-  --text:      #F2F5FA;
-  --muted:     #93A0B8;
-  --accent:    #FFB020;  /* the instrument accent: actions, timers, focus */
-  --good:      #2FD36F;
-  --bad:       #FF4B4B;
-  --tile-blank:#131A26;
-  --tile-lit:  #F4F7FB;
+  /* Stage navy (puzzle-board blue), not near-black — easier on aging eyes. */
+  --bg:        #071530;
+  --surface:   #0E2148;
+  --surface-2: #16305F;
+  --line:      #3A5A8C;
+  --text:      #FFFFFF;
+  /* Secondary copy stays clearly readable (was ~#93A0B8). */
+  --muted:     #C8D6F0;
+  /* Wheel gold — category, timers, primary actions */
+  --accent:    #FFD100;
+  --good:      #3DDC84;
+  /* Bankrupt red, lifted until it clears AAA on navy */
+  --bad:       #FF7A7A;
+  --tile-blank:#0A1A3A;
+  --tile-lit:  #FFFFFF;
+  --on-accent: #0A1630;  /* text on gold buttons */
 
   --tile: 30px;
   --tile-font: 30px;
@@ -30,7 +36,10 @@
 
 html, body {
   margin: 0; padding: 0; height: 100%;
-  background: var(--bg); color: var(--text);
+  background: var(--bg);
+  background-image: radial-gradient(ellipse 140% 90% at 50% -30%, #12356F 0%, var(--bg) 58%);
+  background-attachment: fixed;
+  color: var(--text);
   font-family: var(--font); font-size: 20px; line-height: 1.5;
   -webkit-text-size-adjust: 100%;
   overscroll-behavior: none;
@@ -109,7 +118,7 @@ body { overflow: hidden; }
   touch-action: manipulation; transition: transform .12s ease, background .12s ease;
 }
 .btn:active { transform: scale(.975); background: var(--line); }
-.btn.primary { background: var(--accent); color: #17110A; border-color: var(--accent); }
+.btn.primary { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .btn.good    { background: var(--good); color: #06240F; border-color: var(--good); }
 .btn.bad     { background: var(--bad);  color: #2B0505; border-color: var(--bad); }
 .btn.ghost   { background: transparent; }
@@ -137,10 +146,10 @@ body { overflow: hidden; }
   font-size: var(--tile-font);
   font-weight: 700;
   background: var(--tile-blank);
-  border: 1px solid var(--line);
+  border: 2px solid #4A73B0;
   color: transparent;
 }
-.tile.lit { background: var(--tile-lit); color: #0A0C10; border-color: var(--tile-lit); }
+.tile.lit { background: var(--tile-lit); color: #0A1630; border-color: var(--tile-lit); }
 .tile.punct { background: transparent; border-color: transparent; color: var(--text); }
 .tile.fresh { animation: pop .18s ease-out; }
 @keyframes pop { from { transform: scale(.72); } to { transform: scale(1); } }
@@ -153,7 +162,7 @@ body { overflow: hidden; }
 
 /* ---------- cards / typography ---------- */
 .card {
-  background: var(--surface); border: 1px solid var(--line); border-radius: 14px;
+  background: var(--surface); border: 2px solid var(--line); border-radius: 14px;
   padding: 15px 16px; margin: 0 0 12px;
 }
 .card.good { border-color: var(--good); }
@@ -241,7 +250,7 @@ p  { margin: 0 0 10px; }
 .day.done { border-color: var(--good); }
 .day.done .n { background: var(--good); color: #06240F; }
 .day.current { border-color: var(--accent); }
-.day.current .n { background: var(--accent); color: #17110A; }
+.day.current .n { background: var(--accent); color: var(--on-accent); }
 .day.locked { opacity: .5; }
 
 /* ---------- keyboard grid (bonus letter picker) ---------- */
@@ -257,7 +266,7 @@ p  { margin: 0 0 10px; }
   touch-action: manipulation;
 }
 .key:active { transform: scale(.94); }
-.key.on { background: var(--accent); color: #17110A; border-color: var(--accent); }
+.key.on { background: var(--accent); color: var(--on-accent); border-color: var(--accent); }
 .key.y { border-color: var(--accent); }
 
 /* RSTLNE lives outside the grid: it is information, not a choice, and keeping
