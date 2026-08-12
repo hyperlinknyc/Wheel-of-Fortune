@@ -20,29 +20,124 @@ export const MISTAKES = {
   1: {
     id: 1,
     name: 'Milking a puzzle you had already solved',
-    cue: 'Your mouth knew it before your hand reached the wheel.',
+    cue: 'If you know it — solve.',
+    why: 'Every extra spin risks Bankrupt. Round money only banks on a correct solve.',
   },
   2: {
     id: 2,
     name: 'The confident wrong word',
-    cue: "You filled that word in. You didn't read it.",
+    cue: "Read it — don't invent it.",
+    why: 'Speed plus certainty is how strong solvers say the wrong phrase cleanly.',
   },
   3: {
     id: 3,
     name: 'The vowel reflex',
-    cue: 'Finish the sentence: this changes what I do next.',
+    cue: 'This changes what I do next — or don\'t buy.',
+    why: '$250 is cheap; a vowel with no next move is a waste, not a bargain.',
   },
   4: {
     id: 4,
     name: 'The speed-clip',
-    cue: 'Certainty + speed is the danger combination.',
+    cue: 'Every word, in order, clear ending.',
+    why: 'An extra word or a mumble loses the car. Slow the mouth, not the mind.',
   },
   5: {
     id: 5,
     name: 'Running word-logic on a name puzzle',
-    cue: "Names aren't in the dictionary your solver searches. Buy the vowel.",
+    cue: 'Name? Buy the vowel. Then solve on recognition.',
+    why: 'Names are not in your crossword dictionary. Frequency logic fails; spelling does not.',
   },
 };
+
+/**
+ * The reflex map. Every tip, day intro, and cheat-sheet face should lead with
+ * a cue from here. Math stays available; it is never the primary teaching line.
+ */
+export const REFLEXES = {
+  solveKnown: {
+    id: 'solveKnown',
+    cue: 'If you know it — solve.',
+    why: 'Extra spins risk Bankrupt. Pot only banks when you solve.',
+  },
+  potCap: {
+    id: 'potCap',
+    cue: 'Over nine thousand — solve.',
+    why: 'Above $9,000 no spin pays for the risk. Arithmetic is over.',
+  },
+  nameSolve: {
+    id: 'nameSolve',
+    cue: 'Name category — solve on recognition.',
+    why: 'Milking a name is how you lose an answer you already had.',
+  },
+  certainCopies: {
+    id: 'certainCopies',
+    cue: 'Certain copies on the board — then spin.',
+    why: `One more spin only pays if enough big consonants are clearly still out (about pot ÷ ${COPIES_DIVISOR}).`,
+  },
+  vowelReason: {
+    id: 'vowelReason',
+    cue: 'This changes what I do next — or don\'t buy.',
+    why: 'A vowel is $250 and never ends your turn. No next-action means no buy.',
+  },
+  nameVowel: {
+    id: 'nameVowel',
+    cue: 'Name? Vowel before the second consonant.',
+    why: 'On names, the vowel is the spelling. Order: A → O → E → I.',
+  },
+  bonusAvoidName: {
+    id: 'bonusAvoidName',
+    cue: 'Name offered — take anything else.',
+    why: 'Category choice is the highest-leverage decision of the night. Her gap is names.',
+  },
+  bonusLetters: {
+    id: 'bonusLetters',
+    cue: 'H, G, B + O — unless the category overrides.',
+    why: 'That set covers about 22% of what RSTLNE-sparse bonus boards leave behind.',
+  },
+  yConsonant: {
+    id: 'yConsonant',
+    cue: 'Y is a consonant — it does not spend the vowel.',
+    why: 'You still get three consonants and one vowel. Y fills a consonant slot.',
+  },
+  bonusTalk: {
+    id: 'bonusTalk',
+    cue: 'Talk the whole ten. Silence loses.',
+    why: 'Unlimited guesses. A winnable board is often more than half blank — that is normal.',
+  },
+  tossBuzz: {
+    id: 'tossBuzz',
+    cue: 'Board almost full — buzz a half-beat early.',
+    why: 'A wrong buzz costs only that toss-up. Waiting for certainty leaves money on the table.',
+  },
+  attentionLoop: {
+    id: 'attentionLoop',
+    cue: 'Their turn: longest · best guess · first action.',
+    why: 'Attention needs a job or it drifts. Decide before you get control.',
+  },
+  sayExactly: {
+    id: 'sayExactly',
+    cue: 'Every word, in order, clear ending.',
+    why: 'Mumbling or an extra word loses it. Full articulation at about 80% speed.',
+  },
+  soundNames: {
+    id: 'soundNames',
+    cue: 'Names: say sounds, not letter names.',
+    why: 'Name recognition is auditory. Silent reading uses the wrong retrieval path.',
+  },
+};
+
+/** Tip payload helper — cue first, why second, math optional. */
+export function tipFrom(reflex, { example = null, math = null } = {}) {
+  const r = typeof reflex === 'string' ? REFLEXES[reflex] : reflex;
+  return {
+    cue: r.cue,
+    why: r.why,
+    example,
+    math,
+    // legacy alias so older call sites still render something sensible
+    rule: r.cue,
+  };
+}
 
 export const money = (n) =>
   '$' + Math.round(n).toLocaleString('en-US');

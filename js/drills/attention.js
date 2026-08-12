@@ -7,7 +7,7 @@ import {
 } from '../ui.js';
 import { pick } from '../data.js';
 import { logResult, stats } from '../store.js';
-import { tossUpCoaching, CONVERSION_CEILING, MISTAKES } from '../strategy.js';
+import { tossUpCoaching, CONVERSION_CEILING, MISTAKES, tipFrom, REFLEXES } from '../strategy.js';
 import { pickN } from './common.js';
 
 const REVEAL_MS = 1200; // the real toss-up cadence
@@ -20,10 +20,9 @@ export const tossUp = {
   id: 'toss-up',
   title: 'TOSS-UP BUZZ',
   minutes: 3,
-  tip: {
-    rule: 'Buzz rate and conversion are two different numbers. Only one of them should be high.',
-    example: 'If you are right more than 85% of the time you buzz, you are buzzing too late.',
-  },
+  tip: tipFrom(REFLEXES.tossBuzz, {
+    example: `If you are right more than ${Math.round(CONVERSION_CEILING * 100)}% of the time you buzz, you are buzzing too late.`,
+  }),
   summaryLine(rs) {
     const s = stats();
     return tossUpCoaching({ buzzRate: s.buzzRate, conversion: s.conversion, samples: s.tossUpN });
@@ -152,10 +151,9 @@ export const attentionLoop = {
   id: 'attention-loop',
   title: 'ATTENTION LOOP',
   minutes: 4,
-  tip: {
-    rule: 'Decide your first action while they are still playing, not after you get control.',
-    example: 'Thumb to index: longest word. Middle: best guess. Ring: first action. Run it every turn.',
-  },
+  tip: tipFrom(REFLEXES.attentionLoop, {
+    example: 'Thumb→index: longest word. Middle: best guess. Ring: first action. Run it every opponent turn.',
+  }),
   summaryLine: (rs) => {
     const done = rs.filter((r) => r.correct).length;
     return `${done} of ${rs.length} loops completed. Most contestants get control and then start thinking.`;
