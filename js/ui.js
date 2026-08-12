@@ -120,18 +120,32 @@ function boardLabel(answer, set, showAll) {
 }
 
 /**
+ * The gap between words, as against the 2-4px between letters inside one.
+ *
+ * On the real board a word break is a whole blank cell. Here it used to be
+ * 8px against a 4px letter gap -- a 4px difference, which read as one
+ * continuous run of tiles and made multi-word phrases genuinely hard to
+ * parse. Scaling it off the tile keeps it an unmistakable break at every
+ * size, from a 46px tile down to the 21px floor.
+ */
+const wordGapFor = (tile) => Math.max(14, Math.round(tile * 0.8));
+
+/**
  * Simulates the board's flex-wrap line breaks at a given tile size, without
  * touching the DOM, so sizeBoard() can pick a size before ever painting it.
  * Mirrors the CSS: words pack left-to-right, wrapping to a new row when the
  * next word would not fit in the remaining row width.
+ *
+ * wordGap is passed in rather than derived, so this and the style it predicts
+ * cannot drift apart -- if they do, boards get clipped again.
  */
-function estimateRows(wordLengths, tile, gap, avail) {
+function estimateRows(wordLengths, tile, gap, wordGap, avail) {
   const wordW = (len) => len * tile + (len - 1) * gap;
   let rows = 1;
   let used = 0;
   for (const len of wordLengths) {
     const ww = wordW(len);
-    const needed = used === 0 ? ww : used + gap * 2 + ww; // inter-word gap
+    const needed = used === 0 ? ww : used + wordGap + ww;
     if (needed > avail && used !== 0) { rows++; used = ww; }
     else used = needed;
   }
@@ -162,7 +176,10 @@ export function sizeBoard(board) {
   const words = (board.textContent || '').trim()
     ? [...board.querySelectorAll('.word')].map((w) => w.querySelectorAll('.tile').length)
     : [longest];
-  const gap = longest >= 11 ? 2 : 4;
+  // Letters inside a word sit tight, the way adjacent cells do on the real
+  // board. The contrast against wordGapFor() is what makes the word breaks
+  // readable, so this is deliberately the smaller half of that ratio.
+  const gap = longest >= 11 ? 2 : 3;
   const widthMax = Math.max(21, Math.min(46, Math.floor((avail - (longest - 1) * gap - 2) / longest)));
 
   const screenH = screen?.clientHeight || 600;
@@ -179,14 +196,14 @@ export function sizeBoard(board) {
 
   let tile = widthMax;
   for (; tile > 21; tile--) {
-    const rows = estimateRows(words, tile, gap, avail);
+    const rows = estimateRows(words, tile, gap, wordGapFor(tile), avail);
     const boardH = rows * (tile * 1.34) + (rows - 1) * rowGap;
     if (boardH <= heightBudget) break;
   }
 
   board.style.setProperty('--tile', tile + 'px');
   board.style.setProperty('--tile-font', Math.max(26, Math.round(tile * 1.04)) + 'px');
-  board.style.gap = `6px ${Math.max(6, gap * 2)}px`;
+  board.style.gap = `${rowGap}px ${wordGapFor(tile)}px`;
   for (const w of board.querySelectorAll('.word')) w.style.gap = gap + 'px';
 }
 

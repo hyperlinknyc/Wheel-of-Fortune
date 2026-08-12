@@ -134,7 +134,9 @@ body { overflow: hidden; }
 .board-wrap { margin: 4px 0 14px; }
 .board {
   display: flex; flex-wrap: wrap; justify-content: center;
-  gap: 6px 10px;
+  /* Column gap is the word break and is overwritten by sizeBoard() to scale
+     with the tile; this is only what shows before the first sizing pass. */
+  gap: 6px 18px;
 }
 .word { display: flex; gap: 3px; }
 .tile {
